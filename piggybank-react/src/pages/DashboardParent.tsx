@@ -317,7 +317,13 @@ export default function DashboardParent() {
           <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
             Panel familiar
           </p>
-          <h1 className="mt-2 text-3xl font-black">Control parental</h1>
+          <h1 className="mt-2 text-3xl font-black">
+            Hola {user.username}
+          </h1>
+
+          <p className="mt-1 text-lg text-on-surface-variant">
+            Bienvenido a tu panel familiar
+          </p>
           <p className="mt-2 text-on-surface-variant">Familia {familyId}</p>
         </div>
 

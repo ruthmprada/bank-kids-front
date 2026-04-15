@@ -152,12 +152,11 @@ console.log("ENVIANDO:", {
             <option value="parent">Padre</option>
           </select>
 
-          {role === "child" && (
+          {(role === "child" || role === "parent") && (
             <Input
               value={familyCode}
               onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
-              placeholder="Código familiar"
-              autoComplete="one-time-code"
+              placeholder="Código familiar (opcional para padres)"
             />
           )}
 
