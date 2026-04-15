@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>PiggyBank | Aprende a ahorrar</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&family=Be+Vietnam+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "tertiary-fixed-dim": "#ecaa00",
+              "error-dim": "#a70138",
+              "on-tertiary-fixed-variant": "#5f4200",
+              "on-tertiary-fixed": "#392700",
+              "surface-container-lowest": "#ffffff",
+              "on-error-container": "#510017",
+              "error-container": "#f74b6d",
+              "on-secondary-fixed": "#004935",
+              "on-primary": "#f2f1ff",
+              "primary-fixed-dim": "#718bff",
+              "surface-container-high": "#e2dfff",
+              "on-secondary": "#c7ffe4",
+              "surface": "#f9f5ff",
+              "tertiary-container": "#feb700",
+              "secondary-fixed-dim": "#4eeeb9",
+              "on-surface-variant": "#585781",
+              "tertiary": "#785500",
+              "background": "#f9f5ff",
+              "on-background": "#2b2a51",
+              "inverse-on-surface": "#9a99c6",
+              "on-secondary-fixed-variant": "#00694d",
+              "surface-container-highest": "#dcd9ff",
+              "surface-tint": "#0846ed",
+              "tertiary-dim": "#694a00",
+              "on-primary-container": "#001867",
+              "secondary-dim": "#005b43",
+              "surface-container-low": "#f2efff",
+              "surface-dim": "#d2d0ff",
+              "on-tertiary-container": "#533a00",
+              "outline-variant": "#aba9d7",
+              "secondary": "#00694d",
+              "on-secondary-container": "#005e44",
+              "primary-container": "#859aff",
+              "secondary-fixed": "#60fcc6",
+              "primary-dim": "#003cd3",
+              "secondary-container": "#60fcc6",
+              "surface-variant": "#dcd9ff",
+              "surface-bright": "#f9f5ff",
+              "inverse-primary": "#6d88ff",
+              "inverse-surface": "#0a082f",
+              "on-primary-fixed": "#000000",
+              "primary-fixed": "#859aff",
+              "primary": "#0846ed",
+              "outline": "#74739e",
+              "surface-container": "#e9e5ff",
+              "tertiary-fixed": "#feb700",
+              "on-surface": "#2b2a51",
+              "on-error": "#ffefef",
+              "on-primary-fixed-variant": "#00207e",
+              "on-tertiary": "#fff1de",
+              "error": "#b41340"
+            },
+            "borderRadius": {
+              "DEFAULT": "1rem",
+              "lg": "2rem",
+              "xl": "3rem",
+              "full": "9999px"
+            },
+            "fontFamily": {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Plus Jakarta Sans"]
+            }
+          }
+        }
+      }
+      </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+      }
+      h1, h2, h3, .brand {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-surface text-on-background selection:bg-primary-container selection:text-on-primary-container">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 w-full z-50 bg-violet-50/80 dark:bg-slate-950/80 backdrop-blur-xl">
+      <nav class="flex justify-between items-center px-6 py-4 w-full max-w-7xl mx-auto">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-blue-700 dark:text-blue-400 text-3xl" data-icon="savings">savings</span>
+          <span class="text-2xl font-black tracking-tight text-blue-700 dark:text-blue-400 brand">PiggyBank</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8">
+          <a class="text-blue-700 dark:text-blue-300 font-bold font-label" href="index.html">Inicio</a>
+          <a class="text-slate-500 dark:text-slate-400 font-label hover:bg-violet-100 dark:hover:bg-slate-800 transition-colors px-3 py-1 rounded-full" href="#">Cómo funciona</a>
+          <a class="text-slate-500 dark:text-slate-400 font-label hover:bg-violet-100 dark:hover:bg-slate-800 transition-colors px-3 py-1 rounded-full" href="dashboard_padres.html">Padres</a>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="login.html" class="font-label font-bold text-blue-600 dark:text-blue-400 hover:bg-violet-100 dark:hover:bg-slate-800 px-6 py-2 rounded-xl transition-all active:scale-95 duration-200">Iniciar</a>
+        </div>
+      </nav>
+    </header>
+    <main class="pt-24 pb-16">
+      <!-- Hero Section -->
+      <section class="relative overflow-hidden px-6 py-12 md:py-24">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <!-- Content Left -->
+          <div class="order-2 lg:order-1 relative z-10">
+<div class="inline-flex items-center gap-2 px-4 py-2 bg-secondary-container text-on-secondary-container rounded-full text-sm font-bold mb-6">
+<span class="material-symbols-outlined text-lg" data-icon="stars" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span>¡Ahorrar es un juego!</span>
+</div>
+<h1 class="text-5xl md:text-7xl font-black text-on-background leading-[1.1] tracking-tight mb-8">
+                        Aprende a ahorrar de <span class="text-primary italic">forma divertida</span>
+</h1>
+<p class="text-lg md:text-xl text-on-surface-variant max-w-lg mb-10 leading-relaxed">
+                        Convierte cada moneda en una aventura. Con PiggyBank, los más pequeños descubren el valor del dinero mientras alcanzan sus sueños.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<a href="register.html"><button class="bg-primary text-on-primary px-10 py-5 rounded-xl font-bold text-lg shadow-xl shadow-primary/20 transition-all hover:translate-y-[-2px] active:scale-95">
+                            Únete
+                        </button></a>
+<a href="login.html"><button class="bg-surface-container-highest text-on-surface px-10 py-5 rounded-xl font-bold text-lg transition-all hover:bg-surface-container-high active:scale-95">
+                            Acceso
+                        </button></a>
+</div>
+</div>
+<!-- Hero Illustration / Visual Right -->
+<div class="order-1 lg:order-2 relative">
+<div class="relative w-full aspect-square md:aspect-auto md:h-[500px] rounded-xl bg-primary-container overflow-hidden">
+<img alt="Imagen hero" class="w-full h-full object-cover mix-blend-multiply opacity-80" data-alt="Happy child smiling while holding a transparent piggy bank filled with colorful coins, bright studio lighting, vibrant playful atmosphere" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMjOr6s45lUKLm6_4wG3IN1dlnSu1tyGFba5FNklgOfROC6TQENX4maRZy0sEsU7OsyT6Z-PEthMxz4DJJGnWRXvzfG4fcnmOsZ3u5OGp6Q02CVUtuEirI7AFd9G17gVZ-leIfW1I7yUSS2oCAUNbcweXKmADejcETOkPiBoJ0yL_PHxs6O3Ed2wL51FgLbHkRRhlPQXwIiSwMBeI1rCNDefkXkYukZDrbYPJF0MhGSW7Uy72H5gL7et-W1eK-PoH9TC6ef_wkXOYG"/>
+<!-- Floating Tactile Elements -->
+<div class="absolute top-10 left-10 glass-card p-6 rounded-lg shadow-xl animate-bounce" style="animation-duration: 4s;">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-tertiary-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-container" data-icon="payments" style="font-variation-settings: 'FILL' 1;">payments</span>
+</div>
+<div>
+<p class="text-xs font-label text-on-surface-variant">Meta Alcanzada</p>
+<p class="font-bold text-on-surface">+10.00 €</p>
+</div>
+</div>
+</div>
+<div class="absolute bottom-10 right-10 glass-card p-6 rounded-lg shadow-xl animate-bounce" style="animation-duration: 5s; animation-delay: 1s;">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 bg-secondary-container rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="workspace_premium" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<div>
+<p class="text-xs font-label text-on-surface-variant">Logro Nuevo</p>
+<p class="font-bold text-on-surface">Super Ahorrador</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Background Decorative Circles -->
+<div class="absolute -top-24 -left-24 w-96 h-96 bg-primary-container opacity-20 rounded-full blur-3xl"></div>
+<div class="absolute top-1/2 -right-24 w-64 h-64 bg-tertiary-container opacity-20 rounded-full blur-3xl"></div>
+</section>
+      <!-- Bento Grid Features -->
+      <section class="px-6 py-16 bg-surface-container-low">
+        <div class="max-w-7xl mx-auto">
+          <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-5xl font-black mb-4">¡Tú tienes el control!</h2>
+            <p class="text-on-surface-variant max-w-2xl mx-auto">Nuestra plataforma está diseñada para que aprender sea tan fácil como jugar en el parque.</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[280px]">
+            <!-- Bento Item 1: Savings Goal -->
+            <div class="md:col-span-8 bg-surface-container-lowest rounded-lg p-10 flex flex-col justify-end relative overflow-hidden group">
+              <div class="absolute top-0 right-0 w-1/2 h-full bg-tertiary-container/10 p-10 hidden sm:flex items-center justify-center">
+                <span class="material-symbols-outlined text-9xl text-tertiary-container/30" data-icon="rocket_launch">rocket_launch</span>
+              </div>
+              <div class="relative z-10">
+                <div class="w-14 h-14 bg-tertiary-container rounded-xl flex items-center justify-center mb-6">
+                  <span class="material-symbols-outlined text-on-tertiary-container text-3xl" data-icon="target">target</span>
+                </div>
+                <h3 class="text-3xl font-black mb-2">Metas de Ahorro</h3>
+                <p class="text-on-surface-variant max-w-sm">Define tus sueños, desde un juguete nuevo hasta tu próximo viaje, y mira cómo te acercas cada día.</p>
+              </div>
+            </div>
+<!-- Bento Item 2: Small Activity -->
+<div class="md:col-span-4 bg-primary rounded-lg p-10 flex flex-col justify-between text-on-primary group overflow-hidden">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-4xl" data-icon="bolt" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="text-sm font-black uppercase tracking-widest opacity-70">Instantáneo</span>
+</div>
+<div>
+<h3 class="text-2xl font-black mb-2">Tareas y Recompensas</h3>
+<p class="text-primary-container text-sm leading-relaxed">Completa tus retos diarios y recibe monedas mágicas en tu cuenta.</p>
+</div>
+</div>
+<!-- Bento Item 3: Small Safety -->
+<div class="md:col-span-4 bg-secondary-container rounded-lg p-10 flex flex-col justify-between group">
+<div class="w-12 h-12 bg-white/50 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="security">security</span>
+</div>
+<div>
+<h3 class="text-2xl font-black text-on-secondary-container mb-2">100% Seguro</h3>
+<p class="text-on-secondary-container opacity-80 text-sm">Control parental total para que mamá y papá siempre estén tranquilos.</p>
+</div>
+</div>
+<!-- Bento Item 4: Wide Cards -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-lg p-10 flex items-center gap-10 overflow-hidden">
+<div class="hidden sm:block w-1/3">
+<div class="space-y-4">
+<div class="h-12 bg-surface-container-high rounded-full w-full"></div>
+<div class="h-12 bg-surface-container-high rounded-full w-4/5"></div>
+<div class="h-12 bg-surface-container-high rounded-full w-2/3"></div>
+</div>
+</div>
+<div class="flex-1">
+<h3 class="text-3xl font-black mb-4">Tu Primera Tarjeta</h3>
+<p class="text-on-surface-variant">Una tarjeta real (o virtual) diseñada para manos pequeñas, con límites que tú y tus padres deciden.</p>
+<div class="mt-8 inline-flex items-center gap-2 text-primary font-bold cursor-pointer group-hover:gap-4 transition-all">
+                                Saber más <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Emotional Section -->
+<section class="px-6 py-24 bg-surface">
+<div class="max-w-5xl mx-auto rounded-xl bg-inverse-surface text-on-primary p-12 md:p-20 relative overflow-hidden">
+<div class="absolute top-0 right-0 w-64 h-64 bg-primary-dim/30 rounded-full blur-[100px]"></div>
+<div class="relative z-10 text-center">
+<h2 class="text-4xl md:text-6xl font-black mb-8 leading-tight">¿Listo para empezar tu tesoro?</h2>
+<p class="text-xl text-primary-fixed mb-12 max-w-2xl mx-auto">Únete a miles de pequeños ahorradores que ya están cumpliendo sus sueños hoy mismo.</p>
+<div class="flex flex-wrap justify-center gap-6">
+<a href="register.html"><button class="bg-secondary-fixed text-on-secondary-fixed px-12 py-5 rounded-xl font-bold text-lg hover:scale-105 transition-transform active:scale-95">
+                            Crear mi cuenta gratis
+                        </button></a>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-violet-100 dark:bg-slate-950 w-full py-12 px-6">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 w-full">
+<div class="flex flex-col items-center md:items-start gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-blue-700 text-2xl" data-icon="savings">savings</span>
+<span class="font-bold text-blue-700 text-xl brand">PiggyBank</span>
+</div>
+<p class="font-be-vietnam-pro text-sm text-slate-500 max-w-xs text-center md:text-left">
+                    © 2024 PiggyBank Studio. Hecho para futuros exploradores.
+                </p>
+</div>
+<div class="flex flex-wrap justify-center gap-8">
+<a class="font-be-vietnam-pro text-sm text-slate-500 hover:text-blue-500 transition-colors" href="#">Privacidad</a>
+<a class="font-be-vietnam-pro text-sm text-slate-500 hover:text-blue-500 transition-colors" href="#">Seguridad</a>
+<a class="font-be-vietnam-pro text-sm text-slate-500 hover:text-blue-500 transition-colors" href="#">Guía para Padres</a>
+</div>
+<div class="flex gap-4">
+<div class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined text-blue-600" data-icon="facebook">social_leaderboard</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity cursor-pointer">
+<span class="material-symbols-outlined text-blue-600" data-icon="photo_camera">photo_camera</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

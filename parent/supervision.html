@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Be_Vietnam_Pro:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+              "outline-variant": "#aba9d7",
+              "on-error": "#ffefef",
+              "outline": "#74739e",
+              "error-dim": "#a70138",
+              "tertiary-fixed": "#feb700",
+              "surface-container-high": "#e2dfff",
+              "on-tertiary-fixed-variant": "#5f4200",
+              "surface": "#f9f5ff",
+              "on-tertiary-container": "#533a00",
+              "surface-variant": "#dcd9ff",
+              "background": "#f9f5ff",
+              "primary-fixed-dim": "#718bff",
+              "secondary-fixed-dim": "#4eeeb9",
+              "on-secondary-fixed": "#004935",
+              "error-container": "#f74b6d",
+              "surface-tint": "#0846ed",
+              "surface-bright": "#f9f5ff",
+              "on-primary": "#f2f1ff",
+              "on-surface": "#2b2a51",
+              "error": "#b41340",
+              "on-tertiary-fixed": "#392700",
+              "inverse-on-surface": "#9a99c6",
+              "surface-container": "#e9e5ff",
+              "on-error-container": "#510017",
+              "on-secondary-fixed-variant": "#00694d",
+              "on-primary-fixed-variant": "#00207e",
+              "tertiary-container": "#feb700",
+              "surface-dim": "#d2d0ff",
+              "on-secondary-container": "#005e44",
+              "primary-fixed": "#859aff",
+              "on-secondary": "#c7ffe4",
+              "secondary-fixed": "#60fcc6",
+              "tertiary": "#785500",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-low": "#f2efff",
+              "secondary-container": "#60fcc6",
+              "on-surface-variant": "#585781",
+              "surface-container-highest": "#dcd9ff",
+              "on-primary-fixed": "#000000",
+              "primary-container": "#859aff",
+              "on-tertiary": "#fff1de",
+              "secondary-dim": "#005b43",
+              "primary": "#0846ed",
+              "on-background": "#2b2a51",
+              "tertiary-fixed-dim": "#ecaa00",
+              "on-primary-container": "#001867",
+              "primary-dim": "#003cd3",
+              "inverse-surface": "#0a082f",
+              "tertiary-dim": "#694a00",
+              "inverse-primary": "#6d88ff",
+              "secondary": "#00694d"
+            },
+            "borderRadius": {
+              "DEFAULT": "1rem",
+              "lg": "2rem",
+              "xl": "3rem",
+              "full": "9999px"
+            },
+            "fontFamily": {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Be_Vietnam_Pro"],
+              "label": ["Plus Jakarta Sans"]
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Be Vietnam Pro', sans-serif;
+      }
+      h1, h2, h3 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+      }
+    </style>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-surface text-on-surface min-h-screen pb-32">
+    <!-- TopAppBar -->
+    <header class="flex justify-between items-center w-full px-6 py-4 bg-[#f9f5ff] dark:bg-slate-950">
+      <a href="dashboardPadres.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-container">
+          <img alt="User profile" class="w-full h-full object-cover" data-alt="Portrait of a friendly professional adult woman with a kind expression, soft natural lighting, high-end photography style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrdQZ7n3A3yAk8IJnEJqlprIetP-PxG4FGaclNVkJWVEtehPVlE23jNz7oT1wggNLC03vRNkqyB7SC282ERM8KFE1QnSTbEZX93jo1TOwJl7CEeLGXK0yeAHI18wOr417gY05wj9cS3SCW7vE0zu-VXdnwt1LbZfH0Fcw1ajABKQy3W_AZsgohnpqm7AaKPcFYWb4eKGYW6RrjnP1I8SxuVmNoWTV2yrf4-0mD8Ow3Ivoo3CO1k4DfM_XUEedX9tkCMF2gU1XUb7f-"/>
+        </div>
+        <span class="text-[#2E5BFF] dark:text-blue-400 font-['Plus_Jakarta_Sans'] font-bold text-lg">Supervisando a Leo</span>
+      </a>
+      <button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#f2efff] dark:hover:bg-slate-800 transition-colors active:scale-95 duration-200">
+        <span class="material-symbols-outlined text-[#2E5BFF] dark:text-blue-400">notifications</span>
+      </button>
+    </header>
+    <main class="px-6 space-y-8 max-w-4xl mx-auto">
+      <!-- Header Section: Child Profile & Identity -->
+      <section class="mt-4 flex flex-col items-center gap-4">
+        <div class="relative">
+          <div class="w-28 h-28 rounded-xl overflow-hidden shadow-xl ring-4 ring-white">
+            <img alt="Leo's Avatar" class="w-full h-full object-cover" data-alt="Close up portrait of a cheerful young boy with a bright smile, sun-drenched outdoor playground setting, vibrant colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvdIrEqfRy5aE03Y0dLCMih81RElVb2fbPSqB_-J5bX8ndigHtAm81EUeR7O_qpjlrN6TBHRRxHwsphMn2tdrbvl_PZTIVStOXoGqxdKpp4GUwiC1e4fJlaekd53TGyicPkSg5oRoNl8tfHtJmk1clCar76RzpIw-VqTL2dwOiA075pOZfLuo6-LG-SbC6fWNxmjxLZgq92N6RLRpPCuBp95dB0oZi4DlKIEyQsmxVTJU50rJL9-8ORRLIko_RZ3_6W3tIFWJodJIG"/>
+          </div>
+          <div class="absolute -bottom-2 -right-2 bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+            Nivel 12
+          </div>
+        </div>
+        <div class="text-center">
+          <h2 class="text-2xl font-black tracking-tight text-on-surface">Leo Martínez</h2>
+          <p class="text-on-surface-variant font-medium">Cuenta Estudiante Activa</p>
+        </div>
+      </section>
+      <!-- Quick Actions: Horizontal Layout -->
+      <section class="grid grid-cols-2 gap-4">
+        <a href="asignacion.html" class="bg-primary text-on-primary rounded-xl py-4 flex flex-col items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-all active:scale-95">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+          <span class="font-bold">Añadir Dinero</span>
+        </a>
+        <a href="asignacion.html" class="bg-surface-container-low text-on-surface rounded-xl py-4 flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-all active:scale-95">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">track_changes</span>
+          <span class="font-bold text-on-surface-variant">Ajustar Meta</span>
+        </a>
+      </section>
+      <!-- Quick Stats: Asymmetric Bento Layout -->
+      <section class="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Total Savings -->
+        <div class="col-span-2 bg-surface-container-lowest p-6 rounded-lg shadow-sm flex flex-col justify-between min-h-[160px] border border-outline-variant/10">
+          <div>
+            <span class="text-on-surface-variant font-medium text-sm">Ahorro Total</span>
+            <h3 class="text-4xl font-extrabold text-primary mt-1 tracking-tight">1,250.00 €</h3>
+          </div>
+          <div class="flex items-center gap-2 text-secondary font-bold text-sm">
+            <span class="material-symbols-outlined text-sm">trending_up</span>
+            <span>+12% este mes</span>
+          </div>
+        </div>
+        <!-- Spending this month -->
+        <div class="col-span-1 bg-surface-container-low p-6 rounded-lg flex flex-col justify-between">
+          <span class="text-on-surface-variant font-medium text-sm leading-tight">Gastado (Mes)</span>
+          <div>
+            <span class="text-2xl font-bold text-on-surface">84.50 €</span>
+            <div class="w-full bg-outline-variant/20 h-1.5 rounded-full mt-3 overflow-hidden">
+              <div class="bg-error w-3/4 h-full"></div>
+            </div>
+          </div>
+        </div>
+        <!-- Progress to Goals -->
+        <div class="col-span-2 md:col-span-3 bg-tertiary-container/10 p-6 rounded-lg flex items-center justify-between border-2 border-dashed border-tertiary-container/30">
+          <div class="flex items-center gap-4">
+            <div class="bg-tertiary-container p-3 rounded-xl">
+              <span class="material-symbols-outlined text-on-tertiary-container" style="font-variation-settings: 'FILL' 1;">videogame_asset</span>
+            </div>
+            <div>
+              <p class="text-xs uppercase tracking-widest font-bold text-tertiary">Meta Activa</p>
+              <h4 class="font-bold text-on-surface text-lg">Consola PlayStation 5</h4>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-2xl font-black text-tertiary">65%</span>
+            <p class="text-xs font-medium text-on-surface-variant">Faltan 180 €</p>
+          </div>
+        </div>
+      </section>
+      <!-- Transactions: Tonal Layering List -->
+      <section class="space-y-4">
+        <div class="flex justify-between items-end">
+          <h3 class="text-xl font-extrabold text-on-surface tracking-tight">Actividad Reciente</h3>
+          <a href="movimientos.html" class="text-primary font-bold text-sm">Ver Todo</a>
+        </div>
+        <div class="bg-surface-container-low rounded-lg p-2 space-y-1">
+          <!-- Transaction Item 1 -->
+          <a href="detalleMovimiento.html">
+            <div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg hover:shadow-md transition-shadow cursor-pointer">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-secondary-container/30 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">icecream</span>
+                </div>
+                <div>
+                  <p class="font-bold text-on-surface">Heladería El Polo</p>
+                  <p class="text-xs text-on-surface-variant">Hoy, 14:20</p>
+                </div>
+              </div>
+              <span class="font-bold text-error">-4.50 €</span>
+            </div>
+          </a>
+          <!-- Transaction Item 2 -->
+          <a href="detalleMovimiento.html">
+            <div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg hover:shadow-md transition-shadow cursor-pointer">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-primary-container/30 rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">payments</span>
+                </div>
+                <div>
+                  <p class="font-bold text-on-surface">Mesada Semanal</p>
+                  <p class="text-xs text-on-surface-variant">Ayer, 09:00</p>
+                </div>
+              </div>
+              <span class="font-bold text-secondary">+20.00 €</span>
+            </div>
+          </a>
+          <!-- Transaction Item 3 -->
+          <a href="detalleMovimiento.html">
+            <div class="flex items-center justify-between p-4 bg-surface-container-lowest rounded-lg hover:shadow-md transition-shadow cursor-pointer">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-surface-container-highest rounded-xl flex items-center justify-center">
+                  <span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 1;">shopping_bag</span>
+                </div>
+                <div>
+                  <p class="font-bold text-on-surface">Librería Escolar</p>
+                  <p class="text-xs text-on-surface-variant">22 May, 16:45</p>
+                </div>
+              </div>
+              <span class="font-bold text-error">-12.00 €</span>
+            </div>
+          </a>
+        </div>
+      </section>
+    </main>
+    <!-- Parent BottomNavBar -->
+    <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl shadow-[0_-4px_20px_rgba(43,42,81,0.05)] rounded-t-[3rem]">
+      <!-- Home -->
+      <a class="flex flex-col items-center justify-center text-[#585781] dark:text-slate-400 px-5 py-2 hover:opacity-80 transition-transform active:scale-90 duration-150" href="dashboard_padres.html">
+        <span class="material-symbols-outlined">home</span>
+        <span class="font-['Be_Vietnam_Pro'] text-[12px] font-medium">Inicio</span>
+      </a>
+      <!-- Dashboard (ACTIVE based on being the primary overview of a child account) -->
+      <a class="flex flex-col items-center justify-center bg-[#f2efff] dark:bg-blue-900/30 text-[#2E5BFF] dark:text-blue-300 rounded-[3rem] px-5 py-2 transition-transform active:scale-90 duration-150" href="dashboard_padres.html">
+        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+        <span class="font-['Be_Vietnam_Pro'] text-[12px] font-medium">Dashboard</span>
+      </a>
+      <!-- History -->
+      <a class="flex flex-col items-center justify-center text-[#585781] dark:text-slate-400 px-5 py-2 hover:opacity-80 transition-transform active:scale-90 duration-150" href="movimientos.html">
+        <span class="material-symbols-outlined">receipt_long</span>
+        <span class="font-['Be_Vietnam_Pro'] text-[12px] font-medium">Historial</span>
+      </a>
+      <!-- Settings -->
+      <a class="flex flex-col items-center justify-center text-[#585781] dark:text-slate-400 px-5 py-2 hover:opacity-80 transition-transform active:scale-90 duration-150" href="asignacion.html">
+        <span class="material-symbols-outlined">settings</span>
+        <span class="font-['Be_Vietnam_Pro'] text-[12px] font-medium">Configuración</span>
+      </a>
+    </nav>
+    <script>
+      if (localStorage.getItem("role") !== "child") {
+        window.location.href = "../login.html";
+      }
+    </script>
+  </body>
+</html>
