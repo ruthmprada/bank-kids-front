@@ -155,17 +155,6 @@ export default function DashboardParent() {
     setGoalError("");
   }
 
-  function openAddMoney(childName: string) {
-    setTransactionDraft({
-      id: null,
-      child: childName,
-      amount: "",
-      type: "Ingreso",
-      concept: "",
-    });
-    setTransactionError("");
-  }
-
   function openEditTransaction(transaction: Transaction) {
     setTransactionDraft({
       id: transaction.id,
@@ -410,12 +399,7 @@ export default function DashboardParent() {
                     </div>
 
                     <div className="flex gap-3">
-                      <Button
-                        size="sm"
-                        onClick={() => openAddMoney(child.username)}
-                      >
-                        + Añadir dinero
-                      </Button>
+                      
                     </div>
                   </div>
 
