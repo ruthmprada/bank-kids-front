@@ -44,7 +44,7 @@ function App() {
       <Route
         path="/transaction/:id"
         element={
-          <ProtectedRoute role="parent">
+          <ProtectedRoute roles={["parent", "child"]}>
             <TransactionDetail />
           </ProtectedRoute>
         }

@@ -1,12 +1,15 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 
+type Role = "parent" | "child";
+
 type Props = {
   children: React.ReactNode;
-  role: "parent" | "child";
+  role?: Role;
+  roles?: Role[];
 };
 
-export default function ProtectedRoute({ children, role }: Props) {
+export default function ProtectedRoute({ children, role, roles }: Props) {
   const { user, isAuthenticated } = useAuth();
 
   // ❌ No autenticado
@@ -14,8 +17,18 @@ export default function ProtectedRoute({ children, role }: Props) {
     return <Navigate to="/login" replace />;
   }
 
-  // ❌ Rol incorrecto
-  if (user?.role !== role) {
+  // ❌ Seguridad extra (por si acaso)
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ❌ múltiples roles
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  // ❌ rol único
+  if (role && user.role !== role) {
     return <Navigate to="/" replace />;
   }
 
