@@ -7,6 +7,7 @@ import DashboardChild from "./pages/DashboardChild";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicLayout from "./layouts/PublicLayout";
 import NotFound from "./pages/NotFound";
+import TransactionDetail from "./pages/TransactionDetail";
 
 function App() {
   return (
@@ -17,10 +18,9 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="*" element={<NotFound />} />
       </Route>
 
-      {/* 🔒 RUTAS PRIVADAS */}
+      {/* 🔒 DASHBOARD PARENT */}
       <Route
         path="/parent"
         element={
@@ -30,6 +30,7 @@ function App() {
         }
       />
 
+      {/* 🔒 DASHBOARD CHILD */}
       <Route
         path="/child"
         element={
@@ -39,6 +40,16 @@ function App() {
         }
       />
 
+      {/* 🔒 DETALLE TRANSACCIÓN */}
+      <Route
+        path="/transaction/:id"
+        element={
+          <ProtectedRoute role="parent">
+            <TransactionDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

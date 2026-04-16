@@ -39,5 +39,5 @@
                 console.log(transactions);
 
                 // 🧠 6. REDIRIGIR
-                window.location.href = "../padres/dashboardPadres.html";
+                window.location.href = "../parent/dashboardPadres.html";
             });

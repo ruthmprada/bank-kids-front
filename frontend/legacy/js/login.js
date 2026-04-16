@@ -24,9 +24,9 @@ function handleLogin() {
 
     // Redirigir
     if (role === 'child') {
-        window.location.href = 'hijos/dashboardKids.html';
+        window.location.href = '../hijos/dashboardKids.html';
     } else {
-        window.location.href = 'padres/dashboardPadres.html';
+        window.location.href = '../parent/dashboardPadres.html';
     }
 }
 
