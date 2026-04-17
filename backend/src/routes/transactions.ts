@@ -3,52 +3,114 @@ import db from "../db";
 
 const router = Router();
 
-// GET
-router.get("/:familyId", async (req: Request, res: Response) => {
-  const { familyId } = req.params;
+/**
+ * ============================================
+ * GET /api/transactions/:familyCode
+ * ============================================
+ */
+router.get("/:familyCode", async (req: Request, res: Response) => {
+  const { familyCode } = req.params;
 
   try {
+    console.log("🔥 GET TRANSACTIONS:", familyCode);
+
+    const familyResult = await db.query(
+      "SELECT id FROM families WHERE code = $1",
+      [familyCode]
+    );
+
+    if (familyResult.rows.length === 0) {
+      return res.status(404).json({ error: "Familia no encontrada" });
+    }
+
+    const familyId = familyResult.rows[0].id;
+
     const result = await db.query(
-      "SELECT * FROM transactions WHERE family_id = $1 ORDER BY date DESC",
+      `SELECT * FROM transactions 
+       WHERE family_id = $1 
+       ORDER BY created_at DESC`, // ✅ FIX
       [familyId]
     );
 
-    res.json(result.rows);
+    return res.json(result.rows || []);
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al obtener movimientos" });
+    console.error("❌ ERROR GET TRANSACTIONS:", error);
+
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : "Error obteniendo transacciones"
+    });
   }
 });
 
-// POST
+/**
+ * ============================================
+ * POST /api/transactions
+ * ============================================
+ */
 router.post("/", async (req: Request, res: Response) => {
   const { child, type, concept, amount, familyId } = req.body;
 
   try {
-    const result = await db.query(
-      `INSERT INTO transactions (child, type, concept, amount, family_id, date)
-       VALUES ($1,$2,$3,$4,$5,NOW())
-       RETURNING *`,
-      [child, type, concept, amount, familyId]
+    console.log("🔥 POST TRANSACTION:", req.body);
+
+    if (!child || !type || !amount || !familyId) {
+      return res.status(400).json({
+        error: "Faltan campos obligatorios"
+      });
+    }
+
+    const familyResult = await db.query(
+      "SELECT id FROM families WHERE code = $1",
+      [familyId]
     );
 
-    res.json(result.rows[0]);
+    if (familyResult.rows.length === 0) {
+      return res.status(400).json({ error: "Familia no encontrada" });
+    }
+
+    const realFamilyId = familyResult.rows[0].id;
+
+    const result = await db.query(
+      `INSERT INTO transactions 
+       (child, type, description, amount, family_id, created_at)
+       VALUES ($1,$2,$3,$4,$5,NOW())
+       RETURNING *`, // ✅ FIX (description + created_at)
+      [child, type, concept, amount, realFamilyId]
+    );
+
+    return res.json(result.rows[0]);
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al crear movimiento" });
+    console.error("❌ ERROR POST TRANSACTION:", error);
+
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : "Error creando transacción"
+    });
   }
 });
 
-// DELETE
+/**
+ * ============================================
+ * DELETE
+ * ============================================
+ */
 router.delete("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
+    console.log("🔥 DELETE TRANSACTION:", id);
+
     await db.query("DELETE FROM transactions WHERE id = $1", [id]);
-    res.json({ ok: true });
+
+    return res.json({ ok: true });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error al borrar movimiento" });
+    console.error("❌ ERROR DELETE:", error);
+
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : "Error borrando movimiento"
+    });
   }
 });
 

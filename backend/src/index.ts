@@ -1,15 +1,20 @@
 import express from "express";
 import cors from "cors";
+import dashboardRoutes from "./routes/dashboard";
 import transactionsRoutes from "./routes/transactions";
+import authRoutes from "./routes/auth";
+
 
 const app = express();
 
-// 🔥 middlewares
+// 🔥 middlewares (PRIMERO SIEMPRE)
 app.use(cors());
 app.use(express.json());
 
 // 🔥 rutas
-app.use("/transactions", transactionsRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/transactions", transactionsRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 // 🔥 test
 app.get("/", (req, res) => {

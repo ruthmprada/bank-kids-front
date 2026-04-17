@@ -29,36 +29,59 @@ export default function DashboardParent() {
   useEffect(() => {
     async function loadData() {
       try {
+        // 👶 HIJOS
         const res = await fetch(
           `http://localhost:3000/api/dashboard/children/${familyId}`
         );
         const data = await res.json();
 
-        setUsers(
-          data.map((u: BackendUser) => ({
-            username: u.username,
-            role: u.role,
-            familyId: u.family_code,
-          }))
-        );
+        console.log("HIJOS:", data);
 
+        if (Array.isArray(data)) {
+          setUsers(
+            data.map((u: BackendUser) => ({
+              username: u.username,
+              role: u.role,
+              familyId: u.family_code,
+            }))
+          );
+        } else {
+          console.error("Error cargando hijos:", data);
+          setUsers([]);
+        }
+
+        // 🎯 METAS
         setGoals(getFamilyGoals(familyId));
 
+        // 💸 TRANSACCIONES
         const transactionsRes = await fetch(
           `http://localhost:3000/api/transactions/${familyId}`
         );
         const transactionsData = await transactionsRes.json();
-        setTransactions(transactionsData);
+
+        console.log("TRANSACTIONS:", transactionsData);
+
+        // 🔥 IMPORTANTE: asegurar array
+        if (Array.isArray(transactionsData)) {
+          setTransactions(transactionsData);
+        } else {
+          console.error("Error en transactions:", transactionsData);
+          setTransactions([]);
+        }
+
       } catch (error) {
-        console.error(error);
+        console.error("ERROR LOAD DATA:", error);
+        setUsers([]);
+        setTransactions([]);
       }
     }
 
     if (familyId) loadData();
   }, [familyId]);
 
+  // 🔥 PROTEGIDO
   function getBalance(childName: string) {
-    return transactions.reduce((acc, t) => {
+    return (Array.isArray(transactions) ? transactions : []).reduce((acc, t) => {
       if (t.child !== childName) return acc;
       return t.type === "Ingreso"
         ? acc + t.amount
@@ -66,7 +89,8 @@ export default function DashboardParent() {
     }, 0);
   }
 
-  const totalBalance = transactions.reduce(
+  // 🔥 PROTEGIDO
+  const totalBalance = (Array.isArray(transactions) ? transactions : []).reduce(
     (acc, t) => (t.type === "Ingreso" ? acc + t.amount : acc - t.amount),
     0
   );
@@ -194,9 +218,8 @@ export default function DashboardParent() {
 
       </main>
 
-      {/* NAVBAR INFERIOR */}
+      {/* NAVBAR */}
       <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-white shadow">
-
         <div className="flex flex-col items-center text-blue-600">
           <span>🏠</span>
           <span className="text-xs">Panel</span>
@@ -211,7 +234,6 @@ export default function DashboardParent() {
           <span>⚙️</span>
           <span className="text-xs">Config</span>
         </div>
-
       </nav>
 
     </div>

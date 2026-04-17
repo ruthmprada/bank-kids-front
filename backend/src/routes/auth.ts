@@ -265,8 +265,7 @@ router.post("/register", async (req, res) => {
       message: "Usuario creado",
       familyCode: family.code,
     });
-  } catch (error) {
-    /**
+     /**
      * MANEJO DE ERRORES
      * ────────────────
      * Si algo falla (conexión BD, datos inválidos, etc):
@@ -274,13 +273,13 @@ router.post("/register", async (req, res) => {
      * - Respuesta 500 (error interno del servidor)
      * - Detalles del error para el cliente
      */
-    console.log("💥 ERROR REGISTER:", error);
-
-    res.status(500).json({
-      error: "Error al registrar",
-      details: error.message,
-    });
+  } catch (error) {
+  if (error instanceof Error) {
+    console.log(error.message);
+  } else {
+    console.log(error);
   }
+}
 });
 
 
