@@ -12,14 +12,14 @@ import cors from "cors";
 import authRoutes from "./routes/auth.js";
 
 // Pool de conexión a la base de datos PostgreSQL
-import pool from "./db.js";
+import pool from "./src/db";
 
 // Rutas del dashboard: gestiona datos, movimientos, perfiles de usuarios
 import dashboardRoutes from "./routes/dashboard.js";  
 
 import transactionRoutes from "./routes/transactions.js";
 
-app.use("/api/transactions", transactionRoutes);
+app.use("/api/transactions", transactionsRoutes);
 
 // ============================================
 // INICIALIZACIÓN DEL SERVIDOR
@@ -37,6 +37,8 @@ app.use(cors());
 
 // Parsear JSON: transforma el body de las solicitudes POST/PUT en objetos JavaScript
 app.use(express.json());
+app.use("/api/transactions", transactionsRoutes);
+
 
 // ============================================
 // RUTAS DE LA API
@@ -49,6 +51,7 @@ app.use("/api/dashboard", dashboardRoutes);
 // Todas las rutas de autenticación van bajo el prefijo /api/auth
 // Ej: POST /api/auth/login, POST /api/auth/register
 app.use("/api/auth", authRoutes);
+app.use("/api/transactions", transactionsRoutes);
 
 // ============================================
 // VERIFICACIÓN DE CONEXIÓN A LA BASE DE DATOS

@@ -6,7 +6,7 @@
  * - pool: conexión a la base de datos PostgreSQL
  */
 import express from "express";
-import pool from "../db.js";
+import pool from "../src/db";
 
 // Crear un enrutador de Express para gestionar rutas del dashboard
 const router = express.Router();
