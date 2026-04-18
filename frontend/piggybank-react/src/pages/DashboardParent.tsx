@@ -376,13 +376,19 @@ export default function DashboardParent() {
 
               return (
                 <div key={goal.id} className="mt-3">
-                  <p className="text-sm font-bold">{goal.title}</p>
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm font-bold">{goal.title}</p>
+                    <span className="text-xs font-semibold text-blue-600">{progress}%</span>
+                  </div>
                   <div className="h-2 bg-gray-200 rounded">
                     <div
                       className="h-full bg-blue-500"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {balance.toFixed(2)} € de {goal.targetAmount.toFixed(2)} €
+                  </p>
                 </div>
               );
             })}
