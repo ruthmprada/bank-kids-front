@@ -187,6 +187,21 @@ export default function DashboardParent() {
     setGoalAmount("");
   }
 
+  async function handleDeleteTransaction(transaction: Transaction) {
+    try {
+      const res = await fetch(`http://localhost:3000/api/transactions/${transaction.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error("Error eliminando transacción");
+
+      setTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
+    } catch (error) {
+      console.error("ERROR eliminando transacción:", error);
+      alert("No se pudo eliminar la transacción");
+    }
+  }
+
   function getBalance(child: string) {
     return transactions.reduce((acc, t) => {
       if (t.child.toLowerCase() !== child.toLowerCase()) return acc;
@@ -384,7 +399,7 @@ export default function DashboardParent() {
             No hay movimientos
           </p>
         ) : (
-          <TransactionList transactions={transactions} />
+          <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
         )}
       </Card>
     </div>
