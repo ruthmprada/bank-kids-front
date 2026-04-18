@@ -1,165 +1,186 @@
-import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
 import { useAuth } from "../context/useAuth";
-import type { SavingsGoal, Transaction } from "../context/types";
-import { getChildGoals } from "../services/goalService";
-import { getChildTransactions } from "../services/transactionService";
+import type { Transaction, SavingsGoal } from "../context/types";
+
+// 🔥 Tipos backend
+type BackendGoal = {
+  id: number;
+  family_id: number;
+  child: string;
+  title: string;
+  target_amount: string | number;
+  created_at: string;
+};
+
+type BackendTransaction = {
+  id: number;
+  child: string | null;
+  amount: string | number;
+  type: string;
+  description?: string;
+  created_at?: string;
+};
 
 export default function DashboardChild() {
   const { user, logout } = useAuth();
-  const location = useLocation();
+
   const familyId = user?.familyId ?? "";
   const username = user?.username ?? "";
 
-  const [transactions] = useState<Transaction[]>(() =>
-    familyId && username ? getChildTransactions(familyId, username) : []
-  );
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<SavingsGoal[]>([]);
 
-  const [goals] = useState<SavingsGoal[]>(() =>
-    familyId && username ? getChildGoals(familyId, username) : []
-  );
+  useEffect(() => {
+    async function loadData() {
+      try {
+        // 💸 TRANSACCIONES
+        const res = await fetch(
+          `http://localhost:3000/api/transactions/${familyId}`
+        );
+        const data: BackendTransaction[] = await res.json();
 
-  const [notice, setNotice] = useState<string>(
-    typeof location.state === "object" &&
-      location.state &&
-      "notice" in location.state &&
-      typeof location.state.notice === "string"
-      ? location.state.notice
-      : ""
-  );
+        if (Array.isArray(data)) {
+          const formatted: Transaction[] = data.map((t) => ({
+            id: String(t.id),
+            child: t.child ?? "",
+            amount: Number(t.amount),
+            type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
+            concept: t.description ?? "",
+            familyId,
+            date: t.created_at ?? new Date().toISOString(),
+          }));
+
+          const childTransactions = formatted.filter(
+            (t) =>
+              t.child.trim().toLowerCase() ===
+              username.trim().toLowerCase()
+          );
+
+          setTransactions(childTransactions);
+        } else {
+          setTransactions([]);
+        }
+
+        // 🎯 METAS
+        const goalsRes = await fetch(
+          `http://localhost:3000/api/goals/${familyId}`
+        );
+
+        const goalsData: BackendGoal[] = await goalsRes.json();
+
+        if (Array.isArray(goalsData)) {
+          const formattedGoals: SavingsGoal[] = goalsData.map((g) => ({
+            id: String(g.id),
+            familyId,
+            child: g.child,
+            title: g.title,
+            targetAmount: Number(g.target_amount),
+            createdAt: g.created_at,
+          }));
+
+          const childGoals = formattedGoals.filter(
+            (g) =>
+              g.child.trim().toLowerCase() ===
+              username.trim().toLowerCase()
+          );
+
+          setGoals(childGoals);
+        } else {
+          setGoals([]);
+        }
+
+      } catch (error) {
+        console.error("ERROR CHILD:", error);
+        setTransactions([]);
+        setGoals([]);
+      }
+    }
+
+    if (familyId && username) {
+      loadData();
+    }
+  }, [familyId, username]);
 
   if (!user) return null;
 
-  const balance = transactions.reduce((acc, transaction) => {
-    return transaction.type === "Ingreso"
-      ? acc + transaction.amount
-      : acc - transaction.amount;
+  const balance = transactions.reduce((acc, t) => {
+    return t.type === "Ingreso"
+      ? acc + t.amount
+      : acc - t.amount;
   }, 0);
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,_rgba(0,105,77,0.06),_rgba(249,245,255,0.92)_24%,_rgba(255,255,255,1)_100%)] p-6 md:p-10">
+    <div className="min-h-screen bg-surface p-6">
 
       {/* HEADER */}
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex justify-between mb-6">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-secondary">
-            Panel infantil
-          </p>
-
-          {/* 👇 saludo como en tu HTML */}
-          <h1 className="mt-2 text-3xl font-black">
-            ¡Hola, {user.username}! 👋
+          <h1 className="text-2xl font-bold">
+            Hola {user.username}
           </h1>
-
-          <p className="mt-2 text-on-surface-variant">
-            Familia {familyId}
+          <p className="text-sm text-gray-500">
+            Familia: {familyId}
           </p>
         </div>
 
-        <Button onClick={logout} variant="danger" size="sm">
-          Salir
-        </Button>
+        <Button onClick={logout}>Salir</Button>
       </div>
 
-      {/* NOTICE */}
-      {notice && (
-        <Card className="mb-8 border-secondary/20 bg-secondary/10 p-5">
-          <div className="flex justify-between">
-            <p>{notice}</p>
-            <Button size="sm" onClick={() => setNotice("")}>
-              Cerrar
-            </Button>
-          </div>
-        </Card>
-      )}
+      {/* BALANCE */}
+      <Card className="p-6 mb-6">
+        <p className="text-sm">Saldo</p>
+        <h2 className="text-3xl font-bold">
+          {balance.toFixed(2)} €
+        </h2>
+      </Card>
 
-      {/* TARJETAS PRINCIPALES (como tu HTML) */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-10">
+      {/* 🎯 METAS */}
+      <Card className="p-4 mb-6">
+        <h2 className="font-bold mb-3">Metas</h2>
 
-        {/* 💰 AHORRO TOTAL */}
-        <div className="md:col-span-8 bg-blue-600 text-white p-8 rounded-xl">
-          <h3>AHORRO TOTAL</h3>
-          <div className="text-5xl font-bold">
-            💰{balance.toFixed(2)}€
-          </div>
-        </div>
-
-        {/* 🎯 META */}
-        <div className="md:col-span-4 bg-yellow-300 p-8 rounded-xl">
-          <h3>Meta</h3>
-
-          {goals.length > 0 ? (() => {
-            const goal = goals[0];
+        {goals.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No tienes metas aún
+          </p>
+        ) : (
+          goals.map((goal) => {
             const progress = Math.min(
               100,
-              Math.round((Math.max(balance, 0) / goal.targetAmount) * 100)
+              Math.round((balance / goal.targetAmount) * 100)
             );
 
             return (
-              <>
-                <div className="text-lg font-bold">{progress}%</div>
-
-                <div className="text-sm">
-                  💰{Math.max(balance, 0).toFixed(2)}€ / 💰{goal.targetAmount}€
-                </div>
-
-                <div className="w-full bg-gray-300 h-4 mt-2 rounded">
-                  <div
-                    className="bg-black h-4 rounded transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </>
-            );
-          })() : (
-            <p>No hay meta aún</p>
-          )}
-        </div>
-      </div>
-
-      {/* METAS */}
-      <h2 className="mb-4 text-xl font-bold">Tus metas</h2>
-
-      {goals.length === 0 ? (
-        <Card className="p-6">
-          No tienes metas todavía
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 mb-10">
-          {goals.map((goal) => {
-            const progress = Math.min(
-              100,
-              Math.round((Math.max(balance, 0) / goal.targetAmount) * 100)
-            );
-
-            return (
-              <Card key={goal.id} className="p-6">
+              <div key={goal.id} className="mb-3 border p-3 rounded">
                 <p className="font-bold">{goal.title}</p>
 
-                <div className="mt-3 h-3 bg-secondary/10 rounded">
+                <div className="mt-2 h-2 bg-gray-200 rounded">
                   <div
-                    className="h-full bg-secondary rounded"
+                    className="h-full bg-blue-500"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
 
-                <p className="mt-2 text-sm">
+                <p className="text-xs mt-1">
                   {progress}% completado
                 </p>
-              </Card>
+              </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </Card>
 
       {/* MOVIMIENTOS */}
-      <h2 className="mb-4 text-xl font-bold">Tus movimientos</h2>
-
-      <Card className="p-5">
-        <TransactionList transactions={transactions} />
+      <Card className="p-4">
+        {transactions.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No hay movimientos
+          </p>
+        ) : (
+          <TransactionList transactions={transactions} />
+        )}
       </Card>
     </div>
   );

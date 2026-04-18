@@ -1,9 +1,5 @@
-
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Button from "../components/Button";
-import Card from "../components/Card";
-import Input from "../components/Input";
 import { useAuth } from "../context/useAuth";
 import type { Role } from "../context/types";
 import { getStoredUser } from "../services/authService";
@@ -28,19 +24,13 @@ export default function Register() {
 
   const handleRegister: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    console.log("SUBMIT FUNCIUONA");
     setError("");
 
     if (password !== confirmPassword) {
       setError("Las contraseñas no coinciden");
       return;
     }
-console.log("ENVIANDO:", {
-  username,
-  password,
-  role,
-  familyId: familyCode || null,
-});
+
     try {
       const res = await fetch("http://localhost:3000/api/auth/register", {
         method: "POST",
@@ -70,19 +60,10 @@ console.log("ENVIANDO:", {
       loginUser(user);
 
       if (role === "parent") {
-        navigate("/parent", {
-          state: {
-            notice: `Cuenta creada. Código familiar: ${data.familyCode}`,
-          },
-        });
-        return;
+        navigate("/parent");
+      } else {
+        navigate("/child");
       }
-
-      navigate("/child", {
-        state: {
-          notice: "Cuenta creada correctamente.",
-        },
-      });
     } catch (error) {
       setError(
         error instanceof Error
@@ -92,86 +73,152 @@ console.log("ENVIANDO:", {
     }
   };
 
-  const isDisabled =
-    !username.trim() ||
-    !password ||
-    !confirmPassword ||
-    (role === "child" && !familyCode.trim());
-
   return (
-    <div className="relative flex min-h-[calc(100svh-88px)] items-center justify-center overflow-hidden px-4 py-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(0,105,77,0.12),_transparent_35%),linear-gradient(180deg,_rgba(255,255,255,0.18),_rgba(249,245,255,0.96))]" />
+    <div className="bg-surface text-on-surface min-h-screen flex flex-col">
 
-      <Card className="relative w-full max-w-md space-y-6 border-white/70 bg-white/88 p-8 shadow-[0_24px_70px_rgba(43,42,81,0.12)] backdrop-blur-xl">
-        <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
-            Registro
-          </p>
-          <h1 className="mt-3 text-3xl font-black">Crear cuenta</h1>
-          <p className="mt-2 text-on-surface-variant">
-            Configura tu acceso y vincula tu familia
-          </p>
+      {/* HEADER */}
+      <header className="fixed top-0 w-full z-50 bg-violet-50/80 backdrop-blur-xl flex justify-between items-center px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-3xl">🐷</span>
+          <span className="text-2xl font-black text-blue-700">
+            PiggyBank
+          </span>
         </div>
 
-        {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded-xl text-sm">
-            {error}
-          </div>
-        )}
+        <Link
+          to="/login"
+          className="font-bold text-blue-600 px-4 py-2 rounded-full hover:bg-violet-100"
+        >
+          Entrar
+        </Link>
+      </header>
 
-        <form onSubmit={handleRegister} className="flex flex-col gap-4">
-          <Input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Usuario"
-            autoComplete="username"
-          />
+      {/* MAIN */}
+      <main className="flex-grow flex items-center justify-center p-4 pt-24 pb-12">
+        <div className="max-w-5xl w-full grid md:grid-cols-2 gap-8 items-stretch">
 
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Contraseña"
-            autoComplete="new-password"
-          />
+          {/* HERO */}
+          <div className="hidden md:flex flex-col justify-center p-8 space-y-6">
+            <h1 className="text-5xl font-extrabold">
+              Become a <br />
+              <span className="text-primary italic">
+                Treasure Master
+              </span>
+            </h1>
 
-          <Input
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Confirmar contraseña"
-            autoComplete="new-password"
-          />
+            <p className="text-gray-500">
+              Crea tu cuenta y empieza a ahorrar para tus sueños.
+            </p>
 
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            className="w-full rounded-xl border border-surface-container-high bg-white/85 p-3 text-on-surface shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="child">Hijo</option>
-            <option value="parent">Padre</option>
-          </select>
-
-          {(role === "child" || role === "parent") && (
-            <Input
-              value={familyCode}
-              onChange={(e) => setFamilyCode(e.target.value.toUpperCase())}
-              placeholder="Código familiar (opcional para padres)"
+            <img
+              className="rounded-xl shadow-xl"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBTNpAl-MM55lgv4kcoBkHudhmaoflg4FDR8LmrzwcGKbL2uvtEh_VOvJ1UbVD8N0WtOOqApNLOqj2sJIATuzs5entW4HA-eMYKZcUzIN9ws7699P7KoMa2mYPAZpS6kPmSZwJqOLAzW_y0xcievOJqOiTrq1ig4Dqng2qjQ3I5tgFdVwejR9HLuqLp5dQM6LihlmioTvRsT-zdkU2bGR-V6DIFW0DOYMBEesnDua-17JO_IdqWU-Hc_HdDk1zeZ0OqSKCYZrJ0vhQz"
             />
-          )}
+          </div>
 
-          <Button type="submit" disabled={isDisabled} className="w-full">
-            Registrarse
-          </Button>
-        </form>
+          {/* FORM */}
+          <div className="bg-white rounded-xl p-8 md:p-12 shadow-xl">
 
-        <p className="text-center text-sm text-on-surface-variant">
-          ¿Ya tienes cuenta?{" "}
-          <Link to="/login" className="text-primary font-bold">
-            Inicia sesión
-          </Link>
-        </p>
-      </Card>
+            <h2 className="text-3xl font-bold mb-6 text-center">
+              Crear cuenta
+            </h2>
+
+            {/* ROLE */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <button
+                type="button"
+                onClick={() => setRole("child")}
+                className={`p-4 rounded-xl border ${
+                  role === "child"
+                    ? "border-blue-500 bg-blue-100"
+                    : "bg-gray-100"
+                }`}
+              >
+                👦 Hijo
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setRole("parent")}
+                className={`p-4 rounded-xl border ${
+                  role === "parent"
+                    ? "border-blue-500 bg-blue-100"
+                    : "bg-gray-100"
+                }`}
+              >
+                👨‍👩‍👧 Padre
+              </button>
+            </div>
+
+            {/* ERROR */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-600 rounded">
+                {error}
+              </div>
+            )}
+
+            {/* FORM */}
+            <form onSubmit={handleRegister} className="space-y-4">
+
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Usuario"
+                className="w-full p-4 rounded-xl bg-gray-100"
+              />
+
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Contraseña"
+                className="w-full p-4 rounded-xl bg-gray-100"
+              />
+
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirmar contraseña"
+                className="w-full p-4 rounded-xl bg-gray-100"
+              />
+
+              {/* FAMILY CODE */}
+              {(role === "child" || role === "parent") && (
+                <input
+                  value={familyCode}
+                  onChange={(e) =>
+                    setFamilyCode(e.target.value.toUpperCase())
+                  }
+                  placeholder="Código familiar"
+                  className="w-full p-4 rounded-xl bg-gray-100"
+                />
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl"
+              >
+                Registrarse
+              </button>
+            </form>
+
+            {/* LOGIN */}
+            <p className="mt-6 text-center text-sm text-gray-500">
+              ¿Ya tienes cuenta?{" "}
+              <Link to="/login" className="text-blue-600 font-bold">
+                Inicia sesión
+              </Link>
+            </p>
+
+          </div>
+        </div>
+      </main>
+
+      {/* FOOTER */}
+      <footer className="bg-gray-100 py-8 text-center text-sm text-gray-500">
+        © 2024 PiggyBank
+      </footer>
     </div>
   );
 }

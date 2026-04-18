@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
+import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
-import Card from "../components/Card";
 import { useAuth } from "../context/useAuth";
 import type { Transaction, SavingsGoal } from "../context/types";
-import { getFamilyGoals } from "../services/goalService";
 
 type BackendUser = {
   username: string;
@@ -12,229 +11,331 @@ type BackendUser = {
   family_code: string;
 };
 
-type User = {
-  username: string;
-  role: string;
-  familyId: string;
+type BackendGoal = {
+  id: string;
+  child: string;
+  title: string;
+  target_amount: string | number;
+  created_at: string;
+};
+
+type BackendTransaction = {
+  id: number;
+  child: string | null;
+  amount: string | number;
+  type: string;
+  description?: string;
+  created_at?: string;
 };
 
 export default function DashboardParent() {
   const { user, logout } = useAuth();
   const familyId = user?.familyId ?? "";
 
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<BackendUser[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+
+  const [selectedChild, setSelectedChild] = useState("");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState<"Ingreso" | "Gasto">("Ingreso");
+
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalAmount, setGoalAmount] = useState("");
 
   useEffect(() => {
     async function loadData() {
       try {
-        // 👶 HIJOS
         const res = await fetch(
           `http://localhost:3000/api/dashboard/children/${familyId}`
         );
         const data = await res.json();
 
-        console.log("HIJOS:", data);
+        if (Array.isArray(data)) setUsers(data);
 
-        if (Array.isArray(data)) {
-          setUsers(
-            data.map((u: BackendUser) => ({
-              username: u.username,
-              role: u.role,
-              familyId: u.family_code,
+        const goalsRes = await fetch(
+          `http://localhost:3000/api/goals/${familyId}`
+        );
+        const goalsData = await goalsRes.json();
+
+        if (Array.isArray(goalsData)) {
+          setGoals(
+            goalsData.map((g: BackendGoal) => ({
+              id: g.id,
+              child: g.child,
+              title: g.title,
+              familyId,
+              targetAmount: Number(g.target_amount),
+              createdAt: g.created_at,
             }))
           );
-        } else {
-          console.error("Error cargando hijos:", data);
-          setUsers([]);
         }
 
-        // 🎯 METAS
-        setGoals(getFamilyGoals(familyId));
-
-        // 💸 TRANSACCIONES
         const transactionsRes = await fetch(
           `http://localhost:3000/api/transactions/${familyId}`
         );
         const transactionsData = await transactionsRes.json();
 
-        console.log("TRANSACTIONS:", transactionsData);
-
-        // 🔥 IMPORTANTE: asegurar array
         if (Array.isArray(transactionsData)) {
-          setTransactions(transactionsData);
-        } else {
-          console.error("Error en transactions:", transactionsData);
-          setTransactions([]);
+          setTransactions(
+            transactionsData.map((t: BackendTransaction) => ({
+              id: String(t.id),
+              child: t.child ?? "",
+              amount: Number(t.amount),
+              type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
+              concept: t.description ?? "",
+              familyId,
+              date: t.created_at ?? new Date().toISOString(),
+            }))
+          );
         }
 
       } catch (error) {
-        console.error("ERROR LOAD DATA:", error);
-        setUsers([]);
-        setTransactions([]);
+        console.error(error);
       }
     }
 
     if (familyId) loadData();
   }, [familyId]);
 
-  // 🔥 PROTEGIDO
-  function getBalance(childName: string) {
-    return (Array.isArray(transactions) ? transactions : []).reduce((acc, t) => {
-      if (t.child !== childName) return acc;
-      return t.type === "Ingreso"
-        ? acc + t.amount
-        : acc - t.amount;
+  // 💸 añadir dinero
+  async function handleAddMoney() {
+    const res = await fetch("http://localhost:3000/api/transactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        child: selectedChild,
+        type,
+        description,
+        amount: Number(amount),
+        familyId,
+      }),
+    });
+
+    const newTx = await res.json();
+
+    setTransactions((prev) => [
+      ...prev,
+      {
+        id: String(newTx.id),
+        child: selectedChild,
+        amount: Number(amount),
+        type,
+        concept: description,
+        familyId,
+        date: new Date().toISOString(),
+      },
+    ]);
+
+    setAmount("");
+    setDescription("");
+  }
+
+  // 🎯 crear meta
+  async function handleCreateGoal() {
+    const res = await fetch("http://localhost:3000/api/goals", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        child: selectedChild,
+        title: goalTitle,
+        target_amount: Number(goalAmount),
+        family_id: familyId,
+      }),
+    });
+
+    const newGoal = await res.json();
+
+    setGoals((prev) => [
+      ...prev,
+      {
+        id: newGoal.id,
+        child: selectedChild,
+        title: goalTitle,
+        familyId,
+        targetAmount: Number(goalAmount),
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+
+    setGoalTitle("");
+    setGoalAmount("");
+  }
+
+  function getBalance(child: string) {
+    return transactions.reduce((acc, t) => {
+      if (t.child.toLowerCase() !== child.toLowerCase()) return acc;
+      return t.type === "Ingreso" ? acc + t.amount : acc - t.amount;
     }, 0);
   }
 
-  // 🔥 PROTEGIDO
-  const totalBalance = (Array.isArray(transactions) ? transactions : []).reduce(
-    (acc, t) => (t.type === "Ingreso" ? acc + t.amount : acc - t.amount),
+  const totalBalance = transactions.reduce(
+    (acc, t) =>
+      t.type === "Ingreso" ? acc + t.amount : acc - t.amount,
     0
   );
 
   if (!user) return null;
 
   return (
-    <div className="bg-surface text-on-surface min-h-screen pb-32">
+    <div className="min-h-screen bg-surface p-6">
 
       {/* HEADER */}
-      <header className="flex justify-between items-center w-full px-6 py-4 bg-[#f9f5ff]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200" />
-          <div>
-            <span className="text-[#2E5BFF] font-black text-xl">
-              PiggyBank
-            </span>
-            <p className="text-xs text-gray-500">
-              Hola {user.username}
-            </p>
-            <p className="text-xs text-gray-400">
-              Familia: {familyId}
-            </p>
-          </div>
+      <div className="flex justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Hola {user.username}
+          </h1>
+          <p className="text-sm text-gray-500">
+            Familia: {familyId}
+          </p>
         </div>
 
         <Button onClick={logout}>Salir</Button>
-      </header>
+      </div>
 
-      <main className="px-6 max-w-4xl mx-auto space-y-8 mt-4">
+      {/* BALANCE */}
+      <Card className="p-6 mb-6">
+        <p className="text-sm">Saldo total</p>
+        <h2 className="text-3xl font-bold">
+          {totalBalance.toFixed(2)} €
+        </h2>
+      </Card>
 
-        {/* TITLE */}
-        <section>
-          <h1 className="font-black text-3xl">
-            Control Parental
-          </h1>
-          <p className="text-sm text-gray-500">
-            Gestiona las finanzas de tu familia
-          </p>
-        </section>
+      {/* 💸 FORM */}
+      <Card className="p-6 mb-6 space-y-4">
+        <h2 className="font-bold">Asignar dinero</h2>
 
-        {/* BALANCE */}
-        <section className="relative overflow-hidden p-8 rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-400">
-          <span className="text-xs uppercase">
-            Saldo Total Familiar
-          </span>
-          <div className="text-4xl font-bold mt-2">
-            {totalBalance.toFixed(2)} €
-          </div>
-        </section>
+        <select
+          value={selectedChild}
+          onChange={(e) => setSelectedChild(e.target.value)}
+          className="w-full border p-2 rounded"
+        >
+          <option value="">Selecciona hijo</option>
+          {users.map((c) => (
+            <option key={c.username}>{c.username}</option>
+          ))}
+        </select>
 
-        {/* HIJOS */}
-        <section className="space-y-4">
-          <h2 className="font-bold text-xl">Tus Hijos</h2>
+        <div className="flex gap-2">
+          <Button onClick={() => setType("Ingreso")}>
+            Ingreso
+          </Button>
+          <Button onClick={() => setType("Gasto")}>
+            Gasto
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {users.map((child) => {
-              const balance = getBalance(child.username);
-              const childGoals = goals.filter(
-                (g) => g.child === child.username
-              );
+        <input
+          type="number"
+          placeholder="Cantidad"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
-              return (
-                <Card key={child.username} className="p-4 space-y-3">
+        <input
+          placeholder="Descripción"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
-                  <div className="flex justify-between">
-                    <div>
-                      <p className="font-bold">{child.username}</p>
-                      <p className="text-green-600 font-bold">
-                        {balance.toFixed(2)} €
-                      </p>
-                    </div>
-                  </div>
+        <Button onClick={handleAddMoney}>
+          Confirmar
+        </Button>
+      </Card>
 
-                  {/* METAS */}
-                  {childGoals.map((goal) => {
-                    const progress = Math.min(
-                      100,
-                      Math.round((balance / goal.targetAmount) * 100)
-                    );
+      {/* 🎯 META */}
+      <Card className="p-6 mb-6 space-y-4">
+        <h2 className="font-bold">Crear meta</h2>
 
-                    return (
-                      <div key={goal.id} className="border p-3 rounded">
-                        <p className="font-bold text-sm">{goal.title}</p>
+        <input
+          placeholder="Título"
+          value={goalTitle}
+          onChange={(e) => setGoalTitle(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
-                        <div className="mt-2 h-2 bg-gray-200 rounded">
-                          <div
-                            className="h-full bg-blue-500"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
+        <input
+          type="number"
+          placeholder="Cantidad"
+          value={goalAmount}
+          onChange={(e) => setGoalAmount(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
-                        <p className="text-xs mt-1">
-                          {progress}% completado
-                        </p>
-                      </div>
-                    );
-                  })}
-                </Card>
-              );
-            })}
-          </div>
-        </section>
+        <Button onClick={handleCreateGoal}>
+          Crear meta
+        </Button>
+      </Card>
 
-        {/* ACTIVIDAD */}
-        <section className="space-y-4">
-          <h2 className="font-bold text-xl">
-            Actividad Reciente
-          </h2>
+      {/* 👶 HIJOS */}
+      {users.map((child) => {
+        const balance = getBalance(child.username);
+        const childGoals = goals.filter(
+          (g) =>
+            g.child.toLowerCase() ===
+            child.username.toLowerCase()
+        );
 
-          <Card className="p-4">
-            {transactions.length === 0 ? (
+        return (
+          <Card key={child.username} className="p-4 mb-4">
+            <h3 className="font-bold">{child.username}</h3>
+            <p>{balance.toFixed(2)} €</p>
+
+            {childGoals.length === 0 ? (
               <p className="text-sm text-gray-500">
-                No hay movimientos todavía
+                Sin metas
               </p>
             ) : (
-              <TransactionList
-                transactions={transactions}
-                onEdit={() => {}}
-                onDelete={() => {}}
-              />
+              childGoals.map((goal) => {
+                const progress = Math.min(
+                  100,
+                  Math.round((balance / goal.targetAmount) * 100)
+                );
+
+                return (
+                  <div key={goal.id} className="mt-3">
+                    <p className="font-bold text-sm">
+                      {goal.title}
+                    </p>
+
+                    <div className="h-2 bg-gray-200 rounded">
+                      <div
+                        className="h-full bg-blue-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+
+                    <p className="text-xs mt-1">
+                      {progress}% completado
+                    </p>
+                  </div>
+                );
+              })
             )}
           </Card>
-        </section>
+        );
+      })}
 
-      </main>
+      {/* MOVIMIENTOS */}
+      <Card className="p-4">
+        <h2 className="font-bold mb-2">Movimientos</h2>
 
-      {/* NAVBAR */}
-      <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pb-6 pt-2 bg-white shadow">
-        <div className="flex flex-col items-center text-blue-600">
-          <span>🏠</span>
-          <span className="text-xs">Panel</span>
-        </div>
-
-        <div className="flex flex-col items-center text-gray-500">
-          <span>📄</span>
-          <span className="text-xs">Movimientos</span>
-        </div>
-
-        <div className="flex flex-col items-center text-gray-500">
-          <span>⚙️</span>
-          <span className="text-xs">Config</span>
-        </div>
-      </nav>
+        {transactions.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            No hay movimientos
+          </p>
+        ) : (
+          <TransactionList transactions={transactions} />
+        )}
+      </Card>
 
     </div>
   );

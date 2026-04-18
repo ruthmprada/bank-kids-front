@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Input from "../components/Input";
-import Button from "../components/Button";
-import Card from "../components/Card";
 import { useAuth } from "../context/useAuth";
 import { getStoredUser } from "../services/authService";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"child" | "parent">("child");
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
@@ -28,12 +26,12 @@ export default function Login() {
       const res = await fetch("http://localhost:3000/api/auth/login", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           username: username.trim(),
           password,
-        })
+        }),
       });
 
       const data = await res.json();
@@ -48,7 +46,6 @@ export default function Login() {
 
       if (user.role === "parent") navigate("/parent");
       else navigate("/child");
-
     } catch (error) {
       setError(
         error instanceof Error
@@ -58,63 +55,139 @@ export default function Login() {
     }
   };
 
-  const isDisabled = !username.trim() || !password;
-
   return (
-    <div className="relative flex min-h-[calc(100svh-88px)] items-center justify-center overflow-hidden px-4 py-12">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(8,70,237,0.12),_transparent_35%),linear-gradient(180deg,_rgba(255,255,255,0.2),_rgba(249,245,255,0.95))]" />
+    <div className="bg-background text-on-background min-h-screen flex flex-col">
 
-      <Card className="relative w-full max-w-md space-y-6 border-white/70 bg-white/86 p-8 shadow-[0_24px_70px_rgba(43,42,81,0.12)] backdrop-blur-xl">
-        <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-primary">
-            Acceso
-          </p>
-          <h1 className="mt-3 text-3xl font-black">Bienvenido otra vez</h1>
-          <p className="mt-2 text-on-surface-variant">
-            Entra para revisar tu familia y tus movimientos.
-          </p>
+      {/* HEADER */}
+      <header className="fixed top-0 w-full z-50 bg-violet-50/80 backdrop-blur-xl flex justify-between items-center px-6 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-3xl">🐷</span>
+          <span className="text-2xl font-black text-blue-700">
+            PiggyBank
+          </span>
         </div>
 
-        {error && (
-          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-            {error}
+        <span className="text-gray-500 font-bold">
+          Ayuda
+        </span>
+      </header>
+
+      {/* MAIN */}
+      <main className="flex-grow flex items-center justify-center p-6 mt-16">
+        <div className="w-full max-w-[1000px] grid md:grid-cols-2 gap-8 items-center">
+
+          {/* HERO */}
+          <div className="hidden md:flex flex-col gap-6 pr-8">
+            <h1 className="text-5xl font-black">
+              ¿Listo para contar tu{" "}
+              <span className="text-primary italic">
+                tesoro?
+              </span>
+            </h1>
+
+            <p className="text-gray-500">
+              Introduce tus datos y revisa cuánto has ahorrado.
+            </p>
+
+            <div className="flex gap-4">
+              <div className="p-4 bg-gray-100 rounded-lg">
+                ⭐ Seguro
+              </div>
+              <div className="p-4 bg-gray-100 rounded-lg">
+                ✔ Aprobado por padres
+              </div>
+            </div>
           </div>
-        )}
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleLogin();
-          }}
-          className="flex flex-col gap-4"
-        >
-          <Input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Usuario"
-            autoComplete="username"
-          />
+          {/* CARD */}
+          <div className="relative">
+            <div className="bg-white p-8 md:p-12 rounded-xl shadow-xl">
 
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Contraseña"
-            autoComplete="current-password"
-          />
+              <h2 className="text-3xl font-black mb-6 text-center md:text-left">
+                ¡Hola de nuevo!
+              </h2>
 
-          <Button type="submit" disabled={isDisabled} className="w-full">
-            Entrar
-          </Button>
-        </form>
+              {/* ROLE */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <button
+                  onClick={() => setRole("child")}
+                  className={`p-4 rounded-lg border ${
+                    role === "child"
+                      ? "border-blue-500 bg-blue-100"
+                      : "bg-gray-100"
+                  }`}
+                >
+                  👦 Hijo
+                </button>
 
-        <p className="text-center text-sm text-on-surface-variant">
-          ¿No tienes cuenta?{" "}
-          <Link to="/register" className="font-bold text-primary">
-            Regístrate
-          </Link>
-        </p>
-      </Card>
+                <button
+                  onClick={() => setRole("parent")}
+                  className={`p-4 rounded-lg border ${
+                    role === "parent"
+                      ? "border-blue-500 bg-blue-100"
+                      : "bg-gray-100"
+                  }`}
+                >
+                  👨‍👩‍👧 Padre
+                </button>
+              </div>
+
+              {/* ERROR */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-600 rounded">
+                  {error}
+                </div>
+              )}
+
+              {/* FORM */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleLogin();
+                }}
+                className="space-y-4"
+              >
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Usuario"
+                  className="w-full p-4 rounded-lg bg-gray-100"
+                />
+
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Contraseña"
+                  className="w-full p-4 rounded-lg bg-gray-100"
+                />
+
+                <button
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-4 rounded-full font-bold"
+                >
+                  Entrar
+                </button>
+              </form>
+
+              {/* REGISTER */}
+              <div className="mt-6 text-center text-sm">
+                ¿No tienes cuenta?{" "}
+                <Link to="/register" className="text-blue-600 font-bold">
+                  Regístrate
+                </Link>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      {/* FOOTER */}
+      <footer className="bg-gray-100 py-8 text-center text-sm text-gray-500">
+        © 2024 PiggyBank
+      </footer>
     </div>
   );
 }
