@@ -117,13 +117,24 @@ export default function DashboardChild() {
 
       {/* HEADER */}
       <div className="flex justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">
-            Hola {user.username}
-          </h1>
-          <p className="text-sm text-gray-500">
-            Familia: {familyId}
-          </p>
+        <div className="flex items-center gap-3">
+          <img
+            src={
+              user.avatar ||
+              `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.username}`
+            }
+            className="w-12 h-12 rounded-full"
+            alt="avatar"
+          />
+
+          <div>
+            <h1 className="text-2xl font-bold">
+              Hola {user.username}
+            </h1>
+            <p className="text-sm text-gray-500">
+              Familia: {familyId}
+            </p>
+          </div>
         </div>
 
         <Button onClick={logout}>Salir</Button>

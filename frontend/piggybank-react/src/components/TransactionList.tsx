@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import type { Transaction } from "../context/types";
 import Button from "./Button";
+import { categoryUI } from "../utils/categories";
 
 type Props = {
   transactions: Transaction[];
@@ -51,7 +52,7 @@ export default function TransactionList({
     <div className="space-y-6">
       {Object.entries(grouped).map(([group, items]) => (
         <div key={group}>
-          {/* 🧠 Título grupo */}
+          {/* HEADER GRUPO */}
           <p className="mb-2 text-xs font-bold uppercase text-on-surface-variant">
             {group}
           </p>
@@ -60,21 +61,24 @@ export default function TransactionList({
             {items.map((t) => {
               const isIngreso = t.type === "Ingreso";
 
+              // 🔥 categoría segura
+              const cat =
+                categoryUI[
+                  (t.category as keyof typeof categoryUI) || "otro"
+                ] || categoryUI.otro;
+
               return (
                 <div
                   key={t.id}
-                  
                   onClick={() => navigate(`/transaction/${t.id}`)}
                   className="flex cursor-pointer items-center justify-between rounded-2xl border border-surface-container bg-surface px-4 py-4 transition hover:shadow-md"
                 >
-                  
                   {/* IZQUIERDA */}
                   <div className="flex items-center gap-4">
-                    {/* 🔥 ICONO */}
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-container-high">
-                      <span className="material-symbols-outlined">
-                        {isIngreso ? "savings" : "shopping_cart"}
-                      </span>
+
+                    {/* 🔥 ICONO CON IMAGEN */}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-gray-200 text-lg">
+                      {cat.icon}
                     </div>
 
                     {/* TEXTO */}
@@ -83,11 +87,9 @@ export default function TransactionList({
                         {t.child} {isIngreso ? "recibió" : "gastó"}
                       </p>
 
-                      {t.concept && (
-                        <p className="text-sm text-on-surface">
-                          {t.concept}
-                        </p>
-                      )}
+                      <p className="text-sm text-on-surface">
+                        {cat.label}
+                      </p>
 
                       <p className="text-xs text-on-surface-variant">
                         {new Date(t.date).toLocaleString()}
@@ -111,7 +113,7 @@ export default function TransactionList({
                     {(onEdit || onDelete) && (
                       <div
                         className="flex items-center gap-2"
-                        onClick={(e) => e.stopPropagation()} // 🔥 evita navegar al clicar botones
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {onEdit && (
                           <Button

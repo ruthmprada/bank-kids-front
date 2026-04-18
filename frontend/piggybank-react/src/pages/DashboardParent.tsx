@@ -3,12 +3,14 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
 import { useAuth } from "../context/useAuth";
-import type { Transaction, SavingsGoal } from "../context/types";
+import type { Transaction, SavingsGoal, Category } from "../context/types";
+import { normalizeCategory } from "../utils/categories";
 
 type BackendUser = {
   username: string;
   role: string;
   family_code: string;
+  avatar?: string;
 };
 
 type BackendGoal = {
@@ -26,7 +28,20 @@ type BackendTransaction = {
   type: string;
   description?: string;
   created_at?: string;
+  category?: string;
 };
+
+// 🔥 categorías tipadas (NO any)
+const categories: { key: Category; icon: string }[] = [
+  { key: "comida", icon: "🍔" },
+  { key: "juegos", icon: "🎮" },
+  { key: "ahorro", icon: "💰" },
+  { key: "regalo", icon: "🎁" },
+  { key: "estudios", icon: "📚" },
+  { key: "cine", icon: "🎬" },
+  { key: "tienda", icon: "🛍️" },
+  { key: "otro", icon: "✨" },
+];
 
 export default function DashboardParent() {
   const { user, logout } = useAuth();
@@ -40,6 +55,7 @@ export default function DashboardParent() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"Ingreso" | "Gasto">("Ingreso");
+  const [category, setCategory] = useState<Category>("otro");
 
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
@@ -51,7 +67,6 @@ export default function DashboardParent() {
           `http://localhost:3000/api/dashboard/children/${familyId}`
         );
         const data = await res.json();
-
         if (Array.isArray(data)) setUsers(data);
 
         const goalsRes = await fetch(
@@ -85,22 +100,23 @@ export default function DashboardParent() {
               amount: Number(t.amount),
               type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
               concept: t.description ?? "",
+              category: normalizeCategory(t.category), // 🔥 FIX CLAVE
               familyId,
               date: t.created_at ?? new Date().toISOString(),
             }))
           );
         }
-
       } catch (error) {
-        console.error(error);
+        console.error("ERROR:", error);
       }
     }
 
     if (familyId) loadData();
   }, [familyId]);
 
-  // 💸 añadir dinero
   async function handleAddMoney() {
+    if (!selectedChild || !amount) return;
+
     const res = await fetch("http://localhost:3000/api/transactions", {
       method: "POST",
       headers: {
@@ -112,6 +128,7 @@ export default function DashboardParent() {
         description,
         amount: Number(amount),
         familyId,
+        category,
       }),
     });
 
@@ -125,6 +142,7 @@ export default function DashboardParent() {
         amount: Number(amount),
         type,
         concept: description,
+        category,
         familyId,
         date: new Date().toISOString(),
       },
@@ -132,10 +150,12 @@ export default function DashboardParent() {
 
     setAmount("");
     setDescription("");
+    setCategory("otro");
   }
 
-  // 🎯 crear meta
   async function handleCreateGoal() {
+    if (!selectedChild || !goalTitle || !goalAmount) return;
+
     const res = await fetch("http://localhost:3000/api/goals", {
       method: "POST",
       headers: {
@@ -207,7 +227,7 @@ export default function DashboardParent() {
         </h2>
       </Card>
 
-      {/* 💸 FORM */}
+      {/* 💸 ASIGNAR DINERO */}
       <Card className="p-6 mb-6 space-y-4">
         <h2 className="font-bold">Asignar dinero</h2>
 
@@ -218,15 +238,15 @@ export default function DashboardParent() {
         >
           <option value="">Selecciona hijo</option>
           {users.map((c) => (
-            <option key={c.username}>{c.username}</option>
+            <option key={c.username} value={c.username}>
+              {c.username}
+            </option>
           ))}
         </select>
 
         <div className="flex gap-2">
-          <Button onClick={() => setType("Ingreso")}>
-            Ingreso
-          </Button>
-          <Button onClick={() => setType("Gasto")}>
+          <Button onClick={() => setType("Ingreso")}>Ingreso</Button>
+          <Button onClick={() => setType("Gasto")} variant="danger">
             Gasto
           </Button>
         </div>
@@ -246,17 +266,47 @@ export default function DashboardParent() {
           className="border p-2 rounded w-full"
         />
 
+        {/* 🔥 CATEGORÍAS */}
+        <div className="grid grid-cols-4 gap-3">
+          {categories.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => setCategory(c.key)}
+              className={`p-3 rounded-xl border bg-white ${
+                category === c.key
+                  ? "bg-blue-100 border-blue-500"
+                  : "border-gray-200"
+              }`}
+            >
+              {c.icon}
+            </button>
+          ))}
+        </div>
+
         <Button onClick={handleAddMoney}>
           Confirmar
         </Button>
       </Card>
 
-      {/* 🎯 META */}
+      {/* 🎯 CREAR META */}
       <Card className="p-6 mb-6 space-y-4">
         <h2 className="font-bold">Crear meta</h2>
 
+        <select
+          value={selectedChild}
+          onChange={(e) => setSelectedChild(e.target.value)}
+          className="w-full border p-2 rounded"
+        >
+          <option value="">Selecciona hijo</option>
+          {users.map((c) => (
+            <option key={c.username} value={c.username}>
+              {c.username}
+            </option>
+          ))}
+        </select>
+
         <input
-          placeholder="Título"
+          placeholder="Título de la meta"
           value={goalTitle}
           onChange={(e) => setGoalTitle(e.target.value)}
           className="border p-2 rounded w-full"
@@ -264,7 +314,7 @@ export default function DashboardParent() {
 
         <input
           type="number"
-          placeholder="Cantidad"
+          placeholder="Cantidad objetivo"
           value={goalAmount}
           onChange={(e) => setGoalAmount(e.target.value)}
           className="border p-2 rounded w-full"
@@ -275,7 +325,7 @@ export default function DashboardParent() {
         </Button>
       </Card>
 
-      {/* 👶 HIJOS */}
+      {/* HIJOS */}
       {users.map((child) => {
         const balance = getBalance(child.username);
         const childGoals = goals.filter(
@@ -286,40 +336,41 @@ export default function DashboardParent() {
 
         return (
           <Card key={child.username} className="p-4 mb-4">
-            <h3 className="font-bold">{child.username}</h3>
-            <p>{balance.toFixed(2)} €</p>
+            <div className="flex items-center gap-3">
+              <img
+                src={
+                  child.avatar ||
+                  `https://api.dicebear.com/7.x/adventurer/svg?seed=${child.username}`
+                }
+                className="w-10 h-10 rounded-full"
+              />
 
-            {childGoals.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Sin metas
-              </p>
-            ) : (
-              childGoals.map((goal) => {
-                const progress = Math.min(
-                  100,
-                  Math.round((balance / goal.targetAmount) * 100)
-                );
+              <div>
+                <h3 className="font-bold">{child.username}</h3>
+                <p className="text-sm text-gray-500">
+                  {balance.toFixed(2)} €
+                </p>
+              </div>
+            </div>
 
-                return (
-                  <div key={goal.id} className="mt-3">
-                    <p className="font-bold text-sm">
-                      {goal.title}
-                    </p>
+            {childGoals.map((goal) => {
+              const progress = Math.min(
+                100,
+                Math.round((balance / goal.targetAmount) * 100)
+              );
 
-                    <div className="h-2 bg-gray-200 rounded">
-                      <div
-                        className="h-full bg-blue-500"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-
-                    <p className="text-xs mt-1">
-                      {progress}% completado
-                    </p>
+              return (
+                <div key={goal.id} className="mt-3">
+                  <p className="text-sm font-bold">{goal.title}</p>
+                  <div className="h-2 bg-gray-200 rounded">
+                    <div
+                      className="h-full bg-blue-500"
+                      style={{ width: `${progress}%` }}
+                    />
                   </div>
-                );
-              })
-            )}
+                </div>
+              );
+            })}
           </Card>
         );
       })}
@@ -336,7 +387,6 @@ export default function DashboardParent() {
           <TransactionList transactions={transactions} />
         )}
       </Card>
-
     </div>
   );
 }

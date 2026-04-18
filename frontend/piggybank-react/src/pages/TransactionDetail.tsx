@@ -1,8 +1,16 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import Card from "../components/Card";
-import Button from "../components/Button";
-import { getFamilyTransactions } from "../services/transactionService";
+import { useEffect, useState } from "react";
+import type { Transaction } from "../context/types";
+
+type BackendTransaction = {
+  id: number;
+  child: string | null;
+  amount: string | number;
+  type: string;
+  description?: string;
+  created_at?: string;
+};
 
 export default function TransactionDetail() {
   const { id } = useParams();
@@ -11,19 +19,46 @@ export default function TransactionDetail() {
 
   const familyId = user?.familyId ?? "";
 
-  // 🔥 Obtener transacciones de la familia
-  const transactions = familyId
-    ? getFamilyTransactions(familyId)
-    : [];
+  const [transaction, setTransaction] = useState<Transaction | null>(null);
 
-  // 🔥 Buscar la transacción concreta
-  const transaction = transactions.find((t) => t.id === id);
+  useEffect(() => {
+    async function loadTransaction() {
+      try {
+        const res = await fetch(
+          `http://localhost:3000/api/transactions/${familyId}`
+        );
+
+        const data: BackendTransaction[] = await res.json();
+
+        if (Array.isArray(data)) {
+          const formatted: Transaction[] = data.map((t) => ({
+            id: String(t.id),
+            child: t.child ?? "",
+            amount: Number(t.amount),
+            type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
+            concept: t.description ?? "",
+            familyId,
+            date: t.created_at ?? new Date().toISOString(),
+          }));
+
+          const found = formatted.find((t) => t.id === id);
+
+          setTransaction(found || null);
+        }
+
+      } catch (error) {
+        console.error("ERROR DETAIL:", error);
+      }
+    }
+
+    if (familyId && id) loadTransaction();
+  }, [familyId, id]);
 
   if (!transaction) {
     return (
       <div className="p-6">
         <p>Movimiento no encontrado</p>
-        <Button onClick={() => navigate(-1)}>Volver</Button>
+        <button onClick={() => navigate(-1)}>Volver</button>
       </div>
     );
   }
@@ -31,104 +66,122 @@ export default function TransactionDetail() {
   const isIngreso = transaction.type === "Ingreso";
 
   return (
-    <div className="min-h-screen bg-surface p-6 max-w-md mx-auto">
+    <div className="min-h-screen bg-surface flex flex-col items-center">
 
       {/* HEADER */}
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-xl"
-        >
-          ←
-        </button>
-
-        <h1 className="text-primary font-bold text-lg">
-          Detalle del movimiento
-        </h1>
-      </div>
-
-      {/* ICONO + IMPORTE */}
-      <div className="flex flex-col items-center mb-10">
-        <div className="w-24 h-24 rounded-xl bg-primary-container flex items-center justify-center text-4xl">
-          {isIngreso ? "💰" : "💸"}
-        </div>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-on-surface-variant">
-            MONTO TOTAL
-          </p>
-
-          <div
-            className={`text-4xl font-black ${
-              isIngreso ? "text-green-500" : "text-red-500"
-            }`}
+      <header className="flex justify-between items-center w-full px-6 py-4 bg-[#f9f5ff]">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-200"
           >
-            {isIngreso ? "+" : "-"}
-            {transaction.amount.toFixed(2)} €
+            ←
+          </button>
+
+          <h1 className="text-blue-600 font-bold text-lg">
+            Detalle del movimiento
+          </h1>
+        </div>
+      </header>
+
+      <main className="w-full max-w-md px-6 pt-8 pb-32">
+
+        {/* ICONO + IMPORTE */}
+        <div className="flex flex-col items-center mb-12 relative">
+
+          <div className="w-32 h-32 rounded-xl bg-blue-100 flex items-center justify-center text-5xl">
+            {isIngreso ? "💰" : "💸"}
+          </div>
+
+          <div className="mt-8 text-center">
+            <span className="text-sm text-gray-500 uppercase">
+              MONTO TOTAL
+            </span>
+
+            <div
+              className={`text-5xl font-black mt-1 ${
+                isIngreso ? "text-green-500" : "text-red-500"
+              }`}
+            >
+              {isIngreso ? "+" : "-"}
+              {transaction.amount.toFixed(2)} €
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* INFO */}
-      <div className="grid grid-cols-2 gap-4">
+        {/* INFO */}
+        <div className="grid grid-cols-2 gap-4">
 
-        {/* Categoría */}
-        <Card className="col-span-2 p-4">
-          <p className="text-sm text-on-surface-variant">
-            Categoría
-          </p>
-          <p className="font-bold">
-            {transaction.concept || "Sin concepto"}
-          </p>
-        </Card>
-
-        {/* Fecha */}
-        <Card className="p-4">
-          <p className="text-sm text-on-surface-variant">
-            Fecha
-          </p>
-          <p className="font-bold">
-            {new Date(transaction.date).toLocaleDateString()}
-          </p>
-        </Card>
-
-        {/* Tipo */}
-        <Card className="p-4">
-          <p className="text-sm text-on-surface-variant">
-            Tipo
-          </p>
-          <p className="font-bold">
-            {transaction.type}
-          </p>
-        </Card>
-
-        {/* Hijo */}
-        <Card className="col-span-2 p-4">
-          <p className="text-sm text-on-surface-variant">
-            Usuario
-          </p>
-          <p className="font-bold">
-            {transaction.child}
-          </p>
-        </Card>
-
-        {/* Descripción */}
-        {transaction.concept && (
-          <Card className="col-span-2 p-4">
-            <p className="text-sm text-on-surface-variant">
-              Descripción
+          {/* Categoría */}
+          <div className="col-span-2 bg-white p-6 rounded-lg shadow">
+            <p className="text-xs text-gray-500 uppercase">
+              Categoría
             </p>
-            <p>{transaction.concept}</p>
-          </Card>
-        )}
-      </div>
+            <p className="text-lg font-bold">
+              {transaction.concept || "Sin concepto"}
+            </p>
+          </div>
 
-      {/* BOTONES */}
-      <div className="mt-10 flex flex-col gap-4">
-        <Button onClick={() => navigate(-1)}>
-          Volver
-        </Button>
-      </div>
+          {/* Fecha */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <p className="text-xs text-gray-500 uppercase">
+              Fecha
+            </p>
+            <p className="font-bold">
+              {new Date(transaction.date).toLocaleDateString()}
+            </p>
+          </div>
+
+          {/* Tipo */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <p className="text-xs text-gray-500 uppercase">
+              Tipo
+            </p>
+            <p className="font-bold">
+              {transaction.type}
+            </p>
+          </div>
+
+          {/* Hijo */}
+          <div className="col-span-2 bg-white p-6 rounded-lg shadow">
+            <p className="text-xs text-gray-500 uppercase">
+              Usuario
+            </p>
+            <p className="font-bold">
+              {transaction.child}
+            </p>
+          </div>
+
+          {/* Descripción */}
+          {transaction.concept && (
+            <div className="col-span-2 bg-gray-50 p-6 rounded-lg">
+              <p className="text-xs text-gray-500 uppercase mb-2">
+                Descripción
+              </p>
+              <p className="text-lg">
+                {transaction.concept}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* BOTONES */}
+        <div className="mt-12 flex flex-col gap-4">
+          <button
+            className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold"
+          >
+            Ver Recibo
+          </button>
+
+          <button
+            onClick={() => navigate(-1)}
+            className="text-blue-600 font-bold"
+          >
+            Volver
+          </button>
+        </div>
+
+      </main>
     </div>
   );
 }

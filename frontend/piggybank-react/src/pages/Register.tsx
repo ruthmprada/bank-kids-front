@@ -14,6 +14,7 @@ export default function Register() {
   const [role, setRole] = useState<Role>("child");
   const [familyCode, setFamilyCode] = useState("");
   const [error, setError] = useState("");
+  const [avatar, setAvatar] = useState("");
 
   useEffect(() => {
     const user = getStoredUser();
@@ -42,6 +43,7 @@ export default function Register() {
           password,
           role,
           familyId: familyCode || null,
+          avatar,
         }),
       });
 
@@ -181,6 +183,11 @@ export default function Register() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirmar contraseña"
                 className="w-full p-4 rounded-xl bg-gray-100"
+              />
+                <input
+                value={avatar}
+                onChange={(e) => setAvatar(e.target.value)}
+                placeholder="URL del avatar (opcional)"
               />
 
               {/* FAMILY CODE */}
