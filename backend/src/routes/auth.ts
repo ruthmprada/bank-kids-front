@@ -300,7 +300,7 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   console.log("📦 BODY LOGIN:", req.body);
 
-  let { username, password } = req.body;
+  let { username, password, role } = req.body;
 
   /**
    * PASO 1: NORMALIZACIÓN
@@ -311,6 +311,15 @@ router.post("/login", async (req, res) => {
   username = username?.trim();
 
   console.log("👉 USERNAME RECIBIDO:", username);
+  console.log("👉 ROLE SELECCIONADO:", role);
+
+  /**
+   * VALIDAR QUE SE ENVIÓ UN ROL
+   */
+  if (!role || !["parent", "child"].includes(role)) {
+    console.log("❌ Rol no especificado o inválido:", role);
+    return res.status(400).json({ error: "Debes seleccionar un rol válido (padre o hijo)" });
+  }
 
   try {
     /**
@@ -336,6 +345,19 @@ router.post("/login", async (req, res) => {
      */
     if (!user) {
       return res.status(400).json({ error: "Usuario no encontrado" });
+    }
+
+    /**
+     * PASO 2b: VALIDAR QUE EL ROL COINCIDA
+     * ────────────────────────────────────
+     * El usuario seleccionó un rol en el formulario
+     * Verificamos que coincida con el rol registrado en la BD
+     */
+    if (user.role !== role) {
+      console.log(`❌ Role mismatch: usuario es "${user.role}" pero intentó acceder como "${role}"`);
+      return res.status(400).json({ 
+        error: `Este usuario es ${user.role === "parent" ? "padre" : "hijo"}, no puedes acceder como ${role === "parent" ? "padre" : "hijo"}`
+      });
     }
 
     /**

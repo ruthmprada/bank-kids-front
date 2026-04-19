@@ -31,6 +31,7 @@ export default function Login() {
         body: JSON.stringify({
           username: username.trim(),
           password,
+          role,
         }),
       });
 
