@@ -164,18 +164,21 @@ export default function DashboardChild() {
             );
 
             return (
-              <div key={goal.id} className="mb-3 border p-3 rounded">
-                <p className="font-bold">{goal.title}</p>
+              <div key={goal.id} className="mb-4 border p-3 rounded">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="font-bold">{goal.title}</p>
+                  <span className="text-xs font-semibold text-blue-600">{progress}%</span>
+                </div>
 
-                <div className="mt-2 h-2 bg-gray-200 rounded">
+                <div className="h-2 bg-gray-200 rounded mb-2">
                   <div
                     className="h-full bg-blue-500"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
 
-                <p className="text-xs mt-1">
-                  {progress}% completado
+                <p className="text-xs text-gray-500">
+                  {balance.toFixed(2)} € de {goal.targetAmount.toFixed(2)} €
                 </p>
               </div>
             );

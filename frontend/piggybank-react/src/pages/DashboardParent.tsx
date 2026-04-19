@@ -164,8 +164,8 @@ export default function DashboardParent() {
       body: JSON.stringify({
         child: selectedChild,
         title: goalTitle,
-        target_amount: Number(goalAmount),
-        family_id: familyId,
+        targetAmount: Number(goalAmount),
+        familyId: familyId,
       }),
     });
 
