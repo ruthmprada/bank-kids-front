@@ -60,6 +60,19 @@ export default function DashboardParent() {
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
 
+  function mapBackendTransaction(t: BackendTransaction): Transaction {
+    return {
+      id: String(t.id),
+      child: t.child ?? "",
+      amount: Number(t.amount),
+      type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
+      concept: t.description ?? "",
+      category: normalizeCategory(t.category),
+      familyId,
+      date: t.created_at ?? new Date().toISOString(),
+    };
+  }
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -93,18 +106,7 @@ export default function DashboardParent() {
         const transactionsData = await transactionsRes.json();
 
         if (Array.isArray(transactionsData)) {
-          setTransactions(
-            transactionsData.map((t: BackendTransaction) => ({
-              id: String(t.id),
-              child: t.child ?? "",
-              amount: Number(t.amount),
-              type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
-              concept: t.description ?? "",
-              category: normalizeCategory(t.category), // 🔥 FIX CLAVE
-              familyId,
-              date: t.created_at ?? new Date().toISOString(),
-            }))
-          );
+          setTransactions(transactionsData.map(mapBackendTransaction));
         }
       } catch (error) {
         console.error("ERROR:", error);
@@ -116,41 +118,40 @@ export default function DashboardParent() {
 
   async function handleAddMoney() {
     if (!selectedChild || !amount) return;
+    try {
+      const res = await fetch("http://localhost:3000/api/transactions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          child: selectedChild,
+          type,
+          description,
+          amount: Number(amount),
+          familyId,
+          category,
+        }),
+      });
 
-    const res = await fetch("http://localhost:3000/api/transactions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        child: selectedChild,
-        type,
-        description,
-        amount: Number(amount),
-        familyId,
-        category,
-      }),
-    });
+      const newTx = await res.json();
 
-    const newTx = await res.json();
+      if (!res.ok || !newTx?.id) {
+        throw new Error(newTx?.error || "No se pudo guardar el movimiento");
+      }
 
-    setTransactions((prev) => [
-      ...prev,
-      {
-        id: String(newTx.id),
-        child: selectedChild,
-        amount: Number(amount),
-        type,
-        concept: description,
-        category,
-        familyId,
-        date: new Date().toISOString(),
-      },
-    ]);
-
-    setAmount("");
-    setDescription("");
-    setCategory("otro");
+      setTransactions((prev) => [mapBackendTransaction(newTx), ...prev]);
+      setAmount("");
+      setDescription("");
+      setCategory("otro");
+    } catch (error) {
+      console.error("ERROR creando transacción:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar el movimiento"
+      );
+    }
   }
 
   async function handleCreateGoal() {
@@ -217,6 +218,20 @@ export default function DashboardParent() {
 
   if (!user) return null;
 
+  function getTypeButtonClass(option: "Ingreso" | "Gasto") {
+    const isSelected = type === option;
+
+    if (option === "Ingreso") {
+      return isSelected
+        ? "bg-emerald-600 text-white border-emerald-600 shadow-lg ring-2 ring-emerald-200"
+        : "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50";
+    }
+
+    return isSelected
+      ? "bg-rose-600 text-white border-rose-600 shadow-lg ring-2 ring-rose-200"
+      : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50";
+  }
+
   return (
     <div className="min-h-screen bg-surface p-6">
 
@@ -259,11 +274,27 @@ export default function DashboardParent() {
           ))}
         </select>
 
-        <div className="flex gap-2">
-          <Button onClick={() => setType("Ingreso")}>Ingreso</Button>
-          <Button onClick={() => setType("Gasto")} variant="danger">
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setType("Ingreso")}
+            aria-pressed={type === "Ingreso"}
+            className={`rounded-xl border px-4 py-3 text-sm font-bold transition-all ${getTypeButtonClass(
+              "Ingreso"
+            )}`}
+          >
+            Ingreso
+          </button>
+          <button
+            type="button"
+            onClick={() => setType("Gasto")}
+            aria-pressed={type === "Gasto"}
+            className={`rounded-xl border px-4 py-3 text-sm font-bold transition-all ${getTypeButtonClass(
+              "Gasto"
+            )}`}
+          >
             Gasto
-          </Button>
+          </button>
         </div>
 
         <input

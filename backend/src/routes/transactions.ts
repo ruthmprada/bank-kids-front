@@ -3,6 +3,10 @@ import db from "../db";
 
 const router = Router();
 
+type DbError = Error & {
+  code?: string;
+};
+
 /**
  * ============================================
  * GET /api/transactions/:familyCode
@@ -49,7 +53,17 @@ router.get("/:familyCode", async (req: Request, res: Response) => {
  * ============================================
  */
 router.post("/", async (req: Request, res: Response) => {
-  const { child, type, concept, amount, familyId } = req.body;
+  const {
+    child,
+    type,
+    concept,
+    description,
+    amount,
+    familyId,
+    category,
+  } = req.body;
+
+  const transactionDescription = description ?? concept ?? "";
 
   try {
     console.log("🔥 POST TRANSACTION:", req.body);
@@ -71,13 +85,32 @@ router.post("/", async (req: Request, res: Response) => {
 
     const realFamilyId = familyResult.rows[0].id;
 
-    const result = await db.query(
-      `INSERT INTO transactions 
-       (child, type, description, amount, family_id, created_at)
-       VALUES ($1,$2,$3,$4,$5,NOW())
-       RETURNING *`, // ✅ FIX (description + created_at)
-      [child, type, concept, amount, realFamilyId]
-    );
+    let result;
+
+    try {
+      result = await db.query(
+        `INSERT INTO transactions 
+         (child, type, description, amount, family_id, category, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,NOW())
+         RETURNING *`,
+        [child, type, transactionDescription, amount, realFamilyId, category ?? null]
+      );
+    } catch (error) {
+      const dbError = error as DbError;
+
+      // Compatibilidad con bases antiguas que todavía no tienen la columna category.
+      if (dbError.code === "42703") {
+        result = await db.query(
+          `INSERT INTO transactions 
+           (child, type, description, amount, family_id, created_at)
+           VALUES ($1,$2,$3,$4,$5,NOW())
+           RETURNING *`,
+          [child, type, transactionDescription, amount, realFamilyId]
+        );
+      } else {
+        throw error;
+      }
+    }
 
     return res.json(result.rows[0]);
 

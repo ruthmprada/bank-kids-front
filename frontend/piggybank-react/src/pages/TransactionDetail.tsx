@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { useEffect, useState } from "react";
 import type { Transaction } from "../context/types";
+import { categoryUI, normalizeCategory } from "../utils/categories";
 
 type BackendTransaction = {
   id: number;
@@ -10,6 +11,7 @@ type BackendTransaction = {
   type: string;
   description?: string;
   created_at?: string;
+  category?: string;
 };
 
 export default function TransactionDetail() {
@@ -37,6 +39,7 @@ export default function TransactionDetail() {
             amount: Number(t.amount),
             type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
             concept: t.description ?? "",
+            category: normalizeCategory(t.category),
             familyId,
             date: t.created_at ?? new Date().toISOString(),
           }));
@@ -64,6 +67,7 @@ export default function TransactionDetail() {
   }
 
   const isIngreso = transaction.type === "Ingreso";
+  const category = categoryUI[transaction.category ?? "otro"];
 
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center">
@@ -118,7 +122,17 @@ export default function TransactionDetail() {
               Categoría
             </p>
             <p className="text-lg font-bold">
-              {transaction.concept || "Sin concepto"}
+              {category.label}
+            </p>
+          </div>
+
+          {/* Descripción */}
+          <div className="col-span-2 bg-gray-50 p-6 rounded-lg">
+            <p className="text-xs text-gray-500 uppercase mb-2">
+              Descripción
+            </p>
+            <p className="text-lg">
+              {transaction.concept || "Sin descripción"}
             </p>
           </div>
 
@@ -151,23 +165,12 @@ export default function TransactionDetail() {
               {transaction.child}
             </p>
           </div>
-
-          {/* Descripción */}
-          {transaction.concept && (
-            <div className="col-span-2 bg-gray-50 p-6 rounded-lg">
-              <p className="text-xs text-gray-500 uppercase mb-2">
-                Descripción
-              </p>
-              <p className="text-lg">
-                {transaction.concept}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* BOTONES */}
         <div className="mt-12 flex flex-col gap-4">
           <button
+            type="button"
             className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold"
           >
             Ver Recibo

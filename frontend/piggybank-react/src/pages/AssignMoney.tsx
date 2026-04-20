@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { useAuth } from "../context/useAuth";
 import Button from "../components/Button";
+import type { Category } from "../context/types";
 
 type TransactionType = "Ingreso" | "Gasto";
 
-const categories = [
-  "Comida",
-  "Juegos",
-  "Aprender",
-  "Regalo",
-  "Metas",
-  "Entretenimiento",
-  "Compras",
-  "Otro",
+const categories: { key: Category; label: string }[] = [
+  { key: "comida", label: "Comida" },
+  { key: "juegos", label: "Juegos" },
+  { key: "estudios", label: "Aprender" },
+  { key: "regalo", label: "Regalo" },
+  { key: "ahorro", label: "Metas" },
+  { key: "cine", label: "Entretenimiento" },
+  { key: "tienda", label: "Compras" },
+  { key: "otro", label: "Otro" },
 ];
 
 export default function AssignMoney() {
@@ -21,7 +22,7 @@ export default function AssignMoney() {
   const [child, setChild] = useState("");
   const [type, setType] = useState<TransactionType>("Ingreso");
   const [amount, setAmount] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<Category>("otro");
   const [memo, setMemo] = useState("");
 
   const children = ["Leo", "Sofía"];
@@ -40,7 +41,8 @@ export default function AssignMoney() {
         child,
         amount: Number(amount),
         type,
-        concept: memo,
+        description: memo,
+        category,
         familyId: user?.familyId,
       };
 
@@ -56,6 +58,10 @@ export default function AssignMoney() {
 
       const data = await res.json();
 
+      if (!res.ok || !data?.id) {
+        throw new Error(data?.error || "No se pudo guardar la transacción");
+      }
+
       console.log("✅ Guardado:", data);
 
       alert("Transacción creada 🎉");
@@ -63,7 +69,7 @@ export default function AssignMoney() {
       // 🔄 reset
       setAmount("");
       setMemo("");
-      setCategory("");
+      setCategory("otro");
       setChild("");
 
     } catch (error) {
@@ -71,6 +77,20 @@ export default function AssignMoney() {
       alert("Error creando transacción");
     }
   };
+
+  function getTypeButtonClass(option: TransactionType) {
+    const isSelected = type === option;
+
+    if (option === "Ingreso") {
+      return isSelected
+        ? "bg-emerald-600 text-white border-emerald-600 shadow-lg ring-2 ring-emerald-200"
+        : "bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50";
+    }
+
+    return isSelected
+      ? "bg-rose-600 text-white border-rose-600 shadow-lg ring-2 ring-rose-200"
+      : "bg-white text-rose-700 border-rose-200 hover:bg-rose-50";
+  }
 
   return (
     <div className="min-h-screen bg-surface p-6">
@@ -118,9 +138,10 @@ export default function AssignMoney() {
                   key={t}
                   type="button"
                   onClick={() => setType(t as TransactionType)}
-                  className={`px-4 py-3 rounded-xl border ${
-                    type === t ? "bg-primary text-white" : "bg-white"
-                  }`}
+                  aria-pressed={type === t}
+                  className={`px-4 py-3 rounded-xl border font-bold transition-all ${getTypeButtonClass(
+                    t as TransactionType
+                  )}`}
                 >
                   {t}
                 </button>
@@ -147,16 +168,16 @@ export default function AssignMoney() {
             <div className="grid grid-cols-4 gap-3">
               {categories.map((cat) => (
                 <button
-                  key={cat}
+                  key={cat.key}
                   type="button"
-                  onClick={() => setCategory(cat)}
+                  onClick={() => setCategory(cat.key)}
                   className={`p-3 rounded-xl text-sm ${
-                    category === cat
+                    category === cat.key
                       ? "bg-primary text-white"
                       : "bg-white border"
                   }`}
                 >
-                  {cat}
+                  {cat.label}
                 </button>
               ))}
             </div>
