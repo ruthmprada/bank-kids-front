@@ -15,6 +15,19 @@ import bcrypt from "bcrypt";
 // Crear un enrutador de Express para gestionar rutas de autenticación
 const router = express.Router();
 
+router.get("/avatar-presets", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, label, image_url FROM avatar_presets ORDER BY id ASC"
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("💥 ERROR AVATAR PRESETS:", error);
+    res.status(500).json({ error: "Error obteniendo avatares" });
+  }
+});
+
 /**
  * ============================================
  * ENDPOINT: POST /register
@@ -35,7 +48,7 @@ router.post("/register", async (req, res) => {
   console.log("🔥🔥 REGISTER HIT 🔥🔥");
   console.log("📦 BODY:", req.body);
 
-  let { username, password, role, familyId } = req.body;
+  let { username, password, role, familyId, avatar } = req.body;
 
   /**
    * PASO 1: NORMALIZACIÓN DE DATOS
@@ -249,8 +262,8 @@ router.post("/register", async (req, res) => {
     console.log("👤 Insertando usuario con family_id:", family.id);
 
     const userResult = await pool.query(
-      "INSERT INTO users (username, password, role, family_id) VALUES ($1, $2, $3, $4) RETURNING id",
-      [username, hashedPassword, role, family.id]
+      "INSERT INTO users (username, password, role, family_id, avatar) VALUES ($1, $2, $3, $4, $5) RETURNING id, avatar",
+      [username, hashedPassword, role, family.id, avatar ?? null]
     );
 
     console.log("✅ Usuario creado:", userResult.rows);
@@ -264,6 +277,12 @@ router.post("/register", async (req, res) => {
     res.json({
       message: "Usuario creado",
       familyCode: family.code,
+      user: {
+        username,
+        role,
+        familyId: family.code,
+        avatar: userResult.rows[0]?.avatar ?? avatar ?? null,
+      },
     });
      /**
      * MANEJO DE ERRORES
@@ -330,7 +349,7 @@ router.post("/login", async (req, res) => {
      * Retorna: id, username, role, family_id, password (hasheada)
      */
     const result = await pool.query(
-      `SELECT id, username, role, family_id, password
+      `SELECT id, username, role, family_id, password, avatar
        FROM users 
        WHERE LOWER(username) = LOWER($1)`,
       [username]
@@ -406,6 +425,7 @@ router.post("/login", async (req, res) => {
         username: user.username,
         role: user.role,
         familyId: familyCode,
+        avatar: user.avatar ?? null,
       },
     });
   } catch (error) {

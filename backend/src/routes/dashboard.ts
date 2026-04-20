@@ -27,7 +27,7 @@ router.get("/children/:familyCode", async (req: Request, res: Response) => {
 
     // 👶 Obtener hijos
     const usersResult = await db.query(
-      `SELECT users.username, users.role, families.code as family_code
+      `SELECT users.username, users.role, users.avatar, families.code as family_code
        FROM users
        JOIN families ON users.family_id = families.id
        WHERE users.family_id = $1 AND users.role = 'child'`,

@@ -4,6 +4,12 @@ import { useAuth } from "../context/useAuth";
 import type { Role } from "../context/types";
 import { getStoredUser } from "../services/authService";
 
+type AvatarPreset = {
+  id: number;
+  label: string;
+  image_url: string;
+};
+
 export default function Register() {
   const navigate = useNavigate();
   const { loginUser } = useAuth();
@@ -15,6 +21,7 @@ export default function Register() {
   const [familyCode, setFamilyCode] = useState("");
   const [error, setError] = useState("");
   const [avatar, setAvatar] = useState("");
+  const [avatarPresets, setAvatarPresets] = useState<AvatarPreset[]>([]);
 
   useEffect(() => {
     const user = getStoredUser();
@@ -22,6 +29,44 @@ export default function Register() {
     if (user?.role === "parent") navigate("/parent");
     if (user?.role === "child") navigate("/child");
   }, [navigate]);
+
+  useEffect(() => {
+    async function loadAvatarPresets() {
+      try {
+        const res = await fetch("http://localhost:3000/api/auth/avatar-presets");
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          setAvatarPresets(data);
+        }
+      } catch (error) {
+        console.error("No se pudieron cargar los avatares por defecto", error);
+      }
+    }
+
+    loadAvatarPresets();
+  }, []);
+
+  const handleAvatarFileChange: React.ChangeEventHandler<HTMLInputElement> = (
+    e
+  ) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("El archivo seleccionado debe ser una imagen");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleRegister: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
@@ -53,10 +98,11 @@ export default function Register() {
         throw new Error(data.error || "Error en registro");
       }
 
-      const user = {
+      const user = data.user ?? {
         username,
         role,
         familyId: data.familyCode,
+        avatar,
       };
 
       loginUser(user);
@@ -184,11 +230,74 @@ export default function Register() {
                 placeholder="Confirmar contraseña"
                 className="w-full p-4 rounded-xl bg-gray-100"
               />
+              <div className="rounded-xl bg-gray-50 p-4">
+                <p className="mb-3 text-sm font-bold text-gray-700">
+                  Foto de perfil
+                </p>
+
                 <input
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="URL del avatar (opcional)"
-              />
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                  className="mb-4 block w-full text-sm text-gray-600 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-100 file:px-4 file:py-2 file:font-semibold file:text-blue-700"
+                />
+
+                {avatarPresets.length > 0 && (
+                  <div className="mb-4">
+                    <p className="mb-3 text-sm font-semibold text-gray-600">
+                      O elige un avatar por defecto
+                    </p>
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                      {avatarPresets.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setAvatar(preset.image_url)}
+                          className={`rounded-xl border p-2 transition ${
+                            avatar === preset.image_url
+                              ? "border-blue-500 bg-blue-50"
+                              : "border-gray-200 bg-white"
+                          }`}
+                        >
+                          <img
+                            src={preset.image_url}
+                            alt={preset.label}
+                            className="mx-auto h-14 w-14 rounded-full object-cover"
+                          />
+                          <span className="mt-2 block text-xs font-semibold text-gray-600">
+                            {preset.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {avatar && (
+                  <div className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3">
+                    <img
+                      src={avatar}
+                      alt="Vista previa del avatar"
+                      className="h-16 w-16 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-700">
+                        Vista previa
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Esta imagen se guardará en tu perfil.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAvatar("")}
+                      className="rounded-lg px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {/* FAMILY CODE */}
               {(role === "child" || role === "parent") && (

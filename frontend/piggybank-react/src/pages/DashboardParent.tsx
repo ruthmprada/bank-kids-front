@@ -53,6 +53,7 @@ export default function DashboardParent() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
 
   const [selectedChild, setSelectedChild] = useState("");
+  const [activeChildFilter, setActiveChildFilter] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<"Ingreso" | "Gasto">("Ingreso");
@@ -392,7 +393,31 @@ export default function DashboardParent() {
     }, 0);
   }
 
-  const totalBalance = transactions.reduce(
+  const filteredTransactions = activeChildFilter
+    ? transactions.filter(
+        (t) =>
+          t.child.trim().toLowerCase() ===
+          activeChildFilter.trim().toLowerCase()
+      )
+    : transactions;
+
+  const filteredGoals = activeChildFilter
+    ? goals.filter(
+        (g) =>
+          g.child.trim().toLowerCase() ===
+          activeChildFilter.trim().toLowerCase()
+      )
+    : goals;
+
+  const visibleUsers = activeChildFilter
+    ? users.filter(
+        (child) =>
+          child.username.trim().toLowerCase() ===
+          activeChildFilter.trim().toLowerCase()
+      )
+    : users;
+
+  const totalBalance = filteredTransactions.reduce(
     (acc, t) =>
       t.type === "Ingreso" ? acc + t.amount : acc - t.amount,
     0
@@ -433,10 +458,50 @@ export default function DashboardParent() {
 
       {/* BALANCE */}
       <Card className="p-6 mb-6">
-        <p className="text-sm">Saldo total</p>
+        <p className="text-sm">
+          {activeChildFilter ? `Saldo de ${activeChildFilter}` : "Saldo total"}
+        </p>
         <h2 className="text-3xl font-bold">
           {totalBalance.toFixed(2)} €
         </h2>
+      </Card>
+
+      <Card className="p-4 mb-6">
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveChildFilter("")}
+            className={`rounded-xl border px-4 py-2 text-sm font-bold transition ${
+              activeChildFilter === ""
+                ? "border-blue-500 bg-blue-100 text-blue-700"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            General
+          </button>
+          {users.map((child) => (
+            <button
+              key={child.username}
+              type="button"
+              onClick={() => setActiveChildFilter(child.username)}
+              className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold transition ${
+                activeChildFilter === child.username
+                  ? "border-blue-500 bg-blue-100 text-blue-700"
+                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              <img
+                src={
+                  child.avatar ||
+                  `https://api.dicebear.com/7.x/adventurer/svg?seed=${child.username}`
+                }
+                alt={child.username}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+              {child.username}
+            </button>
+          ))}
+        </div>
       </Card>
 
       {/* 💸 ASIGNAR DINERO */}
@@ -554,9 +619,9 @@ export default function DashboardParent() {
       </Card>
 
       {/* HIJOS */}
-      {users.map((child) => {
+      {visibleUsers.map((child) => {
         const balance = getBalance(child.username);
-        const childGoals = goals.filter(
+        const childGoals = filteredGoals.filter(
           (g) =>
             g.child.toLowerCase() ===
             child.username.toLowerCase()
@@ -676,12 +741,12 @@ export default function DashboardParent() {
       <Card className="p-4">
         <h2 className="font-bold mb-2">Movimientos</h2>
 
-        {transactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <p className="text-sm text-gray-500">
             No hay movimientos
           </p>
         ) : (
-          <TransactionList transactions={transactions} onDelete={handleDeleteTransaction} />
+          <TransactionList transactions={filteredTransactions} onDelete={handleDeleteTransaction} />
         )}
       </Card>
     </div>
