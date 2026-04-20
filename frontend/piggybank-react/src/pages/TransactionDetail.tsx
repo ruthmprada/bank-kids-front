@@ -170,13 +170,6 @@ export default function TransactionDetail() {
         {/* BOTONES */}
         <div className="mt-12 flex flex-col gap-4">
           <button
-            type="button"
-            className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold"
-          >
-            Ver Recibo
-          </button>
-
-          <button
             onClick={() => navigate(-1)}
             className="text-blue-600 font-bold"
           >

@@ -19,6 +19,7 @@ type BackendGoal = {
   title: string;
   target_amount: string | number;
   created_at: string;
+  status?: string;
 };
 
 type BackendTransaction = {
@@ -60,6 +61,23 @@ export default function DashboardParent() {
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
 
+  function mapBackendGoal(g: BackendGoal): SavingsGoal {
+    return {
+      id: String(g.id),
+      child: g.child,
+      title: g.title,
+      familyId,
+      targetAmount: Number(g.target_amount),
+      createdAt: g.created_at,
+      status:
+        g.status === "pending"
+          ? "pending"
+          : g.status === "achieved"
+            ? "achieved"
+            : "approved",
+    };
+  }
+
   function mapBackendTransaction(t: BackendTransaction): Transaction {
     return {
       id: String(t.id),
@@ -88,16 +106,7 @@ export default function DashboardParent() {
         const goalsData = await goalsRes.json();
 
         if (Array.isArray(goalsData)) {
-          setGoals(
-            goalsData.map((g: BackendGoal) => ({
-              id: g.id,
-              child: g.child,
-              title: g.title,
-              familyId,
-              targetAmount: Number(g.target_amount),
-              createdAt: g.created_at,
-            }))
-          );
+          setGoals(goalsData.map(mapBackendGoal));
         }
 
         const transactionsRes = await fetch(
@@ -156,36 +165,209 @@ export default function DashboardParent() {
 
   async function handleCreateGoal() {
     if (!selectedChild || !goalTitle || !goalAmount) return;
+    try {
+      const res = await fetch("http://localhost:3000/api/goals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          child: selectedChild,
+          title: goalTitle,
+          targetAmount: Number(goalAmount),
+          familyId: familyId,
+          status: "approved",
+        }),
+      });
 
-    const res = await fetch("http://localhost:3000/api/goals", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        child: selectedChild,
-        title: goalTitle,
-        targetAmount: Number(goalAmount),
-        familyId: familyId,
-      }),
-    });
+      const newGoal = await res.json();
 
-    const newGoal = await res.json();
+      if (!res.ok || !newGoal?.id) {
+        throw new Error(newGoal?.error || "No se pudo crear la meta");
+      }
 
-    setGoals((prev) => [
-      ...prev,
-      {
-        id: newGoal.id,
-        child: selectedChild,
-        title: goalTitle,
-        familyId,
-        targetAmount: Number(goalAmount),
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+      setGoals((prev) => [
+        ...prev,
+        mapBackendGoal(newGoal),
+      ]);
 
-    setGoalTitle("");
-    setGoalAmount("");
+      setGoalTitle("");
+      setGoalAmount("");
+    } catch (error) {
+      console.error("ERROR creando meta:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la meta"
+      );
+    }
+  }
+
+  async function handleEditGoal(goal: SavingsGoal) {
+    const nextTitle = window.prompt("Nuevo nombre de la meta", goal.title);
+    if (nextTitle === null) return;
+
+    const trimmedTitle = nextTitle.trim();
+    if (!trimmedTitle) {
+      alert("El título no puede estar vacío");
+      return;
+    }
+
+    const nextAmountValue = window.prompt(
+      "Nueva cantidad objetivo",
+      String(goal.targetAmount)
+    );
+    if (nextAmountValue === null) return;
+
+    const nextAmount = Number(nextAmountValue);
+    if (!Number.isFinite(nextAmount) || nextAmount <= 0) {
+      alert("La cantidad objetivo debe ser mayor que 0");
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/goals/${goal.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: trimmedTitle,
+          targetAmount: nextAmount,
+          status: goal.status ?? "approved",
+        }),
+      });
+
+      const updatedGoal = await res.json();
+
+      if (!res.ok || !updatedGoal?.id) {
+        throw new Error(updatedGoal?.error || "No se pudo actualizar la meta");
+      }
+
+      setGoals((prev) =>
+        prev.map((item) =>
+          item.id === goal.id
+            ? {
+                ...item,
+                title: updatedGoal.title,
+                targetAmount: Number(updatedGoal.target_amount),
+                status: updatedGoal.status === "pending" ? "pending" : "approved",
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("ERROR actualizando meta:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la meta"
+      );
+    }
+  }
+
+  async function handleDeleteGoal(goal: SavingsGoal) {
+    const confirmed = window.confirm(
+      `¿Seguro que quieres cancelar la meta "${goal.title}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/goals/${goal.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "No se pudo cancelar la meta");
+      }
+
+      setGoals((prev) => prev.filter((item) => item.id !== goal.id));
+    } catch (error) {
+      console.error("ERROR cancelando meta:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo cancelar la meta"
+      );
+    }
+  }
+
+  async function handleApproveGoal(goal: SavingsGoal) {
+    try {
+      const res = await fetch(
+        `http://localhost:3000/api/goals/${goal.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: "approved" }),
+        }
+      );
+
+      const updatedGoal = await res.json();
+
+      if (!res.ok || !updatedGoal?.id) {
+        throw new Error(updatedGoal?.error || "No se pudo aprobar la meta");
+      }
+
+      setGoals((prev) =>
+        prev.map((item) =>
+          item.id === goal.id
+            ? {
+                ...item,
+                status: "approved",
+                title: updatedGoal.title,
+                targetAmount: Number(updatedGoal.target_amount),
+              }
+            : item
+        )
+      );
+    } catch (error) {
+      console.error("ERROR aprobando meta:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo aprobar la meta"
+      );
+    }
+  }
+
+  async function handleCompleteGoal(goal: SavingsGoal) {
+    try {
+      const res = await fetch(`http://localhost:3000/api/goals/${goal.id}/complete`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.goal || !data?.transaction) {
+        throw new Error(data?.error || "No se pudo marcar la meta como lograda");
+      }
+
+      setGoals((prev) =>
+        prev.map((item) =>
+          item.id === goal.id
+            ? {
+                ...item,
+                status: "achieved",
+              }
+            : item
+        )
+      );
+
+      setTransactions((prev) => [mapBackendTransaction(data.transaction), ...prev]);
+    } catch (error) {
+      console.error("ERROR logrando meta:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo marcar la meta como lograda"
+      );
+    }
   }
 
   async function handleDeleteTransaction(transaction: Transaction) {
@@ -400,15 +582,38 @@ export default function DashboardParent() {
             </div>
 
             {childGoals.map((goal) => {
-              const progress = Math.min(
-                100,
-                Math.round((balance / goal.targetAmount) * 100)
-              );
+              const progress =
+                goal.status === "achieved"
+                  ? 100
+                  : Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        Math.round((balance / goal.targetAmount) * 100)
+                      )
+                    );
 
               return (
                 <div key={goal.id} className="mt-3">
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-sm font-bold">{goal.title}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold">{goal.title}</p>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${
+                          goal.status === "pending"
+                            ? "bg-amber-100 text-amber-700"
+                            : goal.status === "achieved"
+                              ? "bg-sky-100 text-sky-700"
+                              : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {goal.status === "pending"
+                          ? "Pendiente"
+                          : goal.status === "achieved"
+                            ? "Lograda"
+                            : "Confirmada"}
+                      </span>
+                    </div>
                     <span className="text-xs font-semibold text-blue-600">{progress}%</span>
                   </div>
                   <div className="h-2 bg-gray-200 rounded">
@@ -420,6 +625,46 @@ export default function DashboardParent() {
                   <p className="text-xs text-gray-500 mt-1">
                     {balance.toFixed(2)} € de {goal.targetAmount.toFixed(2)} €
                   </p>
+                  <div className="mt-3 flex gap-2">
+                    {goal.status === "pending" ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleApproveGoal(goal)}
+                      >
+                        Aprobar meta
+                      </Button>
+                    ) : goal.status === "approved" ? (
+                      <>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => handleEditGoal(goal)}
+                        >
+                          Modificar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleCompleteGoal(goal)}
+                          className="bg-emerald-600 text-white hover:shadow-xl hover:scale-[1.03] active:scale-[0.98]"
+                        >
+                          ¡Logrado!
+                        </Button>
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700">
+                        Meta completada
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteGoal(goal)}
+                      className="text-red-600 hover:bg-red-50"
+                    >
+                      Cancelar meta
+                    </Button>
+                  </div>
                 </div>
               );
             })}

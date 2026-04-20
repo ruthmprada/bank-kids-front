@@ -4,6 +4,7 @@ import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
 import { useAuth } from "../context/useAuth";
 import type { Transaction, SavingsGoal } from "../context/types";
+import { normalizeCategory } from "../utils/categories";
 
 // 🔥 Tipos backend
 type BackendGoal = {
@@ -13,6 +14,7 @@ type BackendGoal = {
   title: string;
   target_amount: string | number;
   created_at: string;
+  status?: string;
 };
 
 type BackendTransaction = {
@@ -22,6 +24,7 @@ type BackendTransaction = {
   type: string;
   description?: string;
   created_at?: string;
+  category?: string;
 };
 
 export default function DashboardChild() {
@@ -32,6 +35,38 @@ export default function DashboardChild() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalAmount, setGoalAmount] = useState("");
+
+  function mapBackendGoal(g: BackendGoal): SavingsGoal {
+    return {
+      id: String(g.id),
+      familyId,
+      child: g.child,
+      title: g.title,
+      targetAmount: Number(g.target_amount),
+      createdAt: g.created_at,
+      status:
+        g.status === "pending"
+          ? "pending"
+          : g.status === "achieved"
+            ? "achieved"
+            : "approved",
+    };
+  }
+
+  function mapBackendTransaction(t: BackendTransaction): Transaction {
+    return {
+      id: String(t.id),
+      child: t.child ?? "",
+      amount: Number(t.amount),
+      type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
+      concept: t.description ?? "",
+      category: normalizeCategory(t.category),
+      familyId,
+      date: t.created_at ?? new Date().toISOString(),
+    };
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -43,15 +78,7 @@ export default function DashboardChild() {
         const data: BackendTransaction[] = await res.json();
 
         if (Array.isArray(data)) {
-          const formatted: Transaction[] = data.map((t) => ({
-            id: String(t.id),
-            child: t.child ?? "",
-            amount: Number(t.amount),
-            type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
-            concept: t.description ?? "",
-            familyId,
-            date: t.created_at ?? new Date().toISOString(),
-          }));
+          const formatted: Transaction[] = data.map(mapBackendTransaction);
 
           const childTransactions = formatted.filter(
             (t) =>
@@ -72,14 +99,7 @@ export default function DashboardChild() {
         const goalsData: BackendGoal[] = await goalsRes.json();
 
         if (Array.isArray(goalsData)) {
-          const formattedGoals: SavingsGoal[] = goalsData.map((g) => ({
-            id: String(g.id),
-            familyId,
-            child: g.child,
-            title: g.title,
-            targetAmount: Number(g.target_amount),
-            createdAt: g.created_at,
-          }));
+          const formattedGoals: SavingsGoal[] = goalsData.map(mapBackendGoal);
 
           const childGoals = formattedGoals.filter(
             (g) =>
@@ -103,6 +123,77 @@ export default function DashboardChild() {
       loadData();
     }
   }, [familyId, username]);
+
+  async function handleCreateGoalRequest() {
+    if (!username || !goalTitle || !goalAmount) return;
+
+    try {
+      const res = await fetch("http://localhost:3000/api/goals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          child: username,
+          title: goalTitle,
+          targetAmount: Number(goalAmount),
+          familyId,
+          status: "pending",
+        }),
+      });
+
+      const newGoal = await res.json();
+
+      if (!res.ok || !newGoal?.id) {
+        throw new Error(newGoal?.error || "No se pudo crear la meta");
+      }
+
+      setGoals((prev) => [mapBackendGoal(newGoal), ...prev]);
+      setGoalTitle("");
+      setGoalAmount("");
+    } catch (error) {
+      console.error("ERROR creando meta desde hijo:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la meta"
+      );
+    }
+  }
+
+  async function handleCompleteGoal(goal: SavingsGoal) {
+    try {
+      const res = await fetch(`http://localhost:3000/api/goals/${goal.id}/complete`, {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.goal || !data?.transaction) {
+        throw new Error(data?.error || "No se pudo marcar la meta como lograda");
+      }
+
+      setGoals((prev) =>
+        prev.map((item) =>
+          item.id === goal.id
+            ? {
+                ...item,
+                status: "achieved",
+              }
+            : item
+        )
+      );
+
+      setTransactions((prev) => [mapBackendTransaction(data.transaction), ...prev]);
+    } catch (error) {
+      console.error("ERROR logrando meta desde hijo:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudo marcar la meta como lograda"
+      );
+    }
+  }
 
   if (!user) return null;
 
@@ -150,6 +241,26 @@ export default function DashboardChild() {
 
       {/* 🎯 METAS */}
       <Card className="p-4 mb-6">
+        <h2 className="font-bold mb-3">Proponer una meta</h2>
+        <div className="space-y-3 mb-6">
+          <input
+            placeholder="Título de la meta"
+            value={goalTitle}
+            onChange={(e) => setGoalTitle(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
+          <input
+            type="number"
+            placeholder="Cantidad objetivo"
+            value={goalAmount}
+            onChange={(e) => setGoalAmount(e.target.value)}
+            className="w-full border p-2 rounded"
+          />
+          <Button onClick={handleCreateGoalRequest}>
+            Enviar para aprobación
+          </Button>
+        </div>
+
         <h2 className="font-bold mb-3">Metas</h2>
 
         {goals.length === 0 ? (
@@ -158,15 +269,38 @@ export default function DashboardChild() {
           </p>
         ) : (
           goals.map((goal) => {
-            const progress = Math.min(
-              100,
-              Math.round((balance / goal.targetAmount) * 100)
-            );
+            const progress =
+              goal.status === "achieved"
+                ? 100
+                : Math.max(
+                    0,
+                    Math.min(
+                      100,
+                      Math.round((balance / goal.targetAmount) * 100)
+                    )
+                  );
 
             return (
               <div key={goal.id} className="mb-4 border p-3 rounded">
                 <div className="flex justify-between items-center mb-2">
-                  <p className="font-bold">{goal.title}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold">{goal.title}</p>
+                    <span
+                      className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${
+                        goal.status === "pending"
+                          ? "bg-amber-100 text-amber-700"
+                          : goal.status === "achieved"
+                            ? "bg-sky-100 text-sky-700"
+                            : "bg-emerald-100 text-emerald-700"
+                      }`}
+                    >
+                      {goal.status === "pending"
+                        ? "Pendiente de aprobación"
+                        : goal.status === "achieved"
+                          ? "Lograda"
+                          : "Confirmada"}
+                    </span>
+                  </div>
                   <span className="text-xs font-semibold text-blue-600">{progress}%</span>
                 </div>
 
@@ -180,6 +314,24 @@ export default function DashboardChild() {
                 <p className="text-xs text-gray-500">
                   {balance.toFixed(2)} € de {goal.targetAmount.toFixed(2)} €
                 </p>
+                {goal.status === "approved" && (
+                  <div className="mt-3">
+                    <Button
+                      size="sm"
+                      onClick={() => handleCompleteGoal(goal)}
+                      className="bg-emerald-600 text-white hover:shadow-xl hover:scale-[1.03] active:scale-[0.98]"
+                    >
+                      ¡Logrado!
+                    </Button>
+                  </div>
+                )}
+                {goal.status === "achieved" && (
+                  <div className="mt-3">
+                    <span className="inline-flex items-center rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700">
+                      Meta completada
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })

@@ -68,6 +68,7 @@ export type SavingsGoal = {
   title: string;
   targetAmount: number;
   createdAt: string;
+  status?: "pending" | "approved" | "achieved";
 };
 
 // 🔐 CONTEXTO AUTH

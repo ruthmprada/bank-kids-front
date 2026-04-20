@@ -32,9 +32,23 @@ async function ensureTransactionsSchema() {
   );
 }
 
+async function ensureGoalsSchema() {
+  await db.query(
+    `ALTER TABLE goals
+     ADD COLUMN IF NOT EXISTS status TEXT`
+  );
+
+  await db.query(
+    `UPDATE goals
+     SET status = 'approved'
+     WHERE status IS NULL OR status = ''`
+  );
+}
+
 async function startServer() {
   try {
     await ensureTransactionsSchema();
+    await ensureGoalsSchema();
 
     app.listen(3000, () => {
       console.log("Servidor corriendo en http://localhost:3000");
