@@ -461,14 +461,24 @@ return (
     <div className="min-h-screen bg-surface p-6">
 
       {/* HEADER */}
-      <div className="flex justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">
-            Hola {user.username}
-          </h1>
-          <p className="text-sm text-gray-500">
-            Familia: {familyId}
-          </p>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <img
+            src={
+              user?.avatar ||
+              `https://api.dicebear.com/7.x/adventurer/svg?seed=${user?.username}`
+            }
+            alt={user?.username}
+            className="w-12 h-12 rounded-full object-cover border-2 border-blue-500"
+          />
+          <div>
+            <h1 className="text-2xl font-bold">
+              Hola {user.username}
+            </h1>
+            <p className="text-sm text-gray-500">
+              Familia: {familyId}
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-3">
