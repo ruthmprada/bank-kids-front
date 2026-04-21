@@ -337,13 +337,17 @@ export default function Register() {
               </div>
 
               {/* FAMILY CODE */}
-              {role === "child" && (
+              {(role === "parent" || role === "child") && (
                 <input
                   value={familyCode}
                   onChange={(e) =>
                     setFamilyCode(e.target.value.toUpperCase())
                   }
-                  placeholder="Código familiar"
+                  placeholder={
+                    role === "parent"
+                      ? "Código familiar (opcional - déjalo en blanco para crear uno nuevo)"
+                      : "Código familiar"
+                  }
                   className="w-full p-4 rounded-xl bg-gray-100"
                 />
               )}
