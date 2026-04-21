@@ -12,6 +12,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { loginUser } = useAuth();
 
+  // 🔐 sesión persistente (auto login)
   useEffect(() => {
     const user = getStoredUser();
 
@@ -19,6 +20,7 @@ export default function Login() {
     if (user?.role === "child") navigate("/child");
   }, [navigate]);
 
+  // 🔥 LOGIN CON BACKEND (bcrypt)
   const handleLogin = async () => {
     setError("");
 
@@ -41,12 +43,16 @@ export default function Login() {
         throw new Error(data.error || "Error en login");
       }
 
-      const user = data.user;
+      // 🔐 guardar usuario en contexto + localStorage
+      loginUser(data.user);
 
-      loginUser(user);
+      // 🔀 redirección
+      if (data.user.role === "parent") {
+        navigate("/parent");
+      } else {
+        navigate("/child");
+      }
 
-      if (user.role === "parent") navigate("/parent");
-      else navigate("/child");
     } catch (error) {
       setError(
         error instanceof Error

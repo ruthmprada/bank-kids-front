@@ -3,15 +3,15 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "es2020",
     "lib": ["ES2020"],
-    "module": "CommonJS",
+    "module": "ESNext",
     "types": ["node"],
     "skipLibCheck": true,
     "strict": true,
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
   
 
     /* Bundler mode */
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "noEmit": true,
 
     /* Linting */
@@ -26,4 +26,3 @@
   "include": ["vite.config.ts"],
  
 }
-

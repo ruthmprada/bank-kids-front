@@ -1,11 +1,7 @@
 import { Router, Request, Response } from "express";
-import db from "../db";
+import { supabase } from "../lib/supabase";
 
 const router = Router();
-
-type DbError = Error & {
-  code?: string;
-};
 
 /**
  * ============================================
@@ -18,31 +14,39 @@ router.get("/:familyCode", async (req: Request, res: Response) => {
   try {
     console.log("🔥 GET TRANSACTIONS:", familyCode);
 
-    const familyResult = await db.query(
-      "SELECT id FROM families WHERE code = $1",
-      [familyCode]
-    );
+    // 🔥 Obtener ID de la familia
+    const { data: familyData, error: familyError } = await supabase
+      .from("families")
+      .select("id")
+      .eq("code", familyCode)
+      .single();
 
-    if (familyResult.rows.length === 0) {
+    if (familyError || !familyData) {
       return res.status(404).json({ error: "Familia no encontrada" });
     }
 
-    const familyId = familyResult.rows[0].id;
+    const familyId = familyData.id;
 
-    const result = await db.query(
-      `SELECT * FROM transactions 
-       WHERE family_id = $1 
-       ORDER BY created_at DESC`, // ✅ FIX
-      [familyId]
-    );
+    // 🔥 Obtener transacciones
+    const { data, error } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("family_id", familyId)
+      .order("created_at", { ascending: false });
 
-    return res.json(result.rows || []);
+    if (error) {
+      throw error;
+    }
+
+    return res.json(data || []);
 
   } catch (error) {
     console.error("❌ ERROR GET TRANSACTIONS:", error);
 
     return res.status(500).json({
-      error: error instanceof Error ? error.message : "Error obteniendo transacciones"
+      error: error instanceof Error
+        ? error.message
+        : "Error obteniendo transacciones"
     });
   }
 });
@@ -74,58 +78,54 @@ router.post("/", async (req: Request, res: Response) => {
       });
     }
 
-    const familyResult = await db.query(
-      "SELECT id FROM families WHERE code = $1",
-      [familyId]
-    );
+    // 🔥 Obtener ID real de familia
+    const { data: familyData, error: familyError } = await supabase
+      .from("families")
+      .select("id")
+      .eq("code", familyId)
+      .single();
 
-    if (familyResult.rows.length === 0) {
+    if (familyError || !familyData) {
       return res.status(400).json({ error: "Familia no encontrada" });
     }
 
-    const realFamilyId = familyResult.rows[0].id;
+    const realFamilyId = familyData.id;
 
-    let result;
+    // 🔥 Insertar transacción
+    const { data, error } = await supabase
+      .from("transactions")
+      .insert([
+        {
+          child,
+          type,
+          description: transactionDescription,
+          amount,
+          family_id: realFamilyId,
+          category: category ?? "otro",
+        },
+      ])
+      .select();
 
-    try {
-      result = await db.query(
-        `INSERT INTO transactions 
-         (child, type, description, amount, family_id, category, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,NOW())
-         RETURNING *`,
-        [child, type, transactionDescription, amount, realFamilyId, category ?? null]
-      );
-    } catch (error) {
-      const dbError = error as DbError;
-
-      // Compatibilidad con bases antiguas que todavía no tienen la columna category.
-      if (dbError.code === "42703") {
-        result = await db.query(
-          `INSERT INTO transactions 
-           (child, type, description, amount, family_id, created_at)
-           VALUES ($1,$2,$3,$4,$5,NOW())
-           RETURNING *`,
-          [child, type, transactionDescription, amount, realFamilyId]
-        );
-      } else {
-        throw error;
-      }
+    if (error) {
+      throw error;
     }
 
-    return res.json(result.rows[0]);
+    return res.json(data[0]);
 
   } catch (error) {
     console.error("❌ ERROR POST TRANSACTION:", error);
 
     return res.status(500).json({
-      error: error instanceof Error ? error.message : "Error creando transacción"
+      error: error instanceof Error
+        ? error.message
+        : "Error creando transacción"
     });
   }
 });
 
 /**
  * ============================================
- * DELETE
+ * DELETE /api/transactions/:id
  * ============================================
  */
 router.delete("/:id", async (req: Request, res: Response) => {
@@ -134,7 +134,14 @@ router.delete("/:id", async (req: Request, res: Response) => {
   try {
     console.log("🔥 DELETE TRANSACTION:", id);
 
-    await db.query("DELETE FROM transactions WHERE id = $1", [id]);
+    const { error } = await supabase
+      .from("transactions")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      throw error;
+    }
 
     return res.json({ ok: true });
 
@@ -142,7 +149,9 @@ router.delete("/:id", async (req: Request, res: Response) => {
     console.error("❌ ERROR DELETE:", error);
 
     return res.status(500).json({
-      error: error instanceof Error ? error.message : "Error borrando movimiento"
+      error: error instanceof Error
+        ? error.message
+        : "Error borrando movimiento"
     });
   }
 });

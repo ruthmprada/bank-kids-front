@@ -1,5 +1,5 @@
-import { Router } from "express";
-import db from "../db";
+import { Router, Request, Response } from "express";
+import { supabase } from "../lib/supabase";
 
 const router = Router();
 
@@ -7,234 +7,259 @@ function normalizeGoalStatus(status?: string) {
   if (status === "pending" || status === "achieved") {
     return status;
   }
-
   return "approved";
 }
 
-// 🔹 GET metas por familia
-router.get("/:familyCode", async (req, res) => {
+/**
+ * ============================================
+ * GET /api/goals/:familyCode
+ * ============================================
+ */
+router.get("/:familyCode", async (req: Request, res: Response) => {
   const { familyCode } = req.params;
 
   try {
     console.log("🔥 GET GOALS:", familyCode);
 
-    const family = await db.query(
-      "SELECT id FROM families WHERE code = $1",
-      [familyCode]
-    );
+    const { data: familyData, error: familyError } = await supabase
+      .from("families")
+      .select("id")
+      .eq("code", familyCode)
+      .single();
 
-    if (family.rows.length === 0) {
-      console.error("❌ Familia no encontrada:", familyCode);
+    if (familyError || !familyData) {
       return res.status(404).json({ error: "Familia no encontrada" });
     }
 
-    const familyId = family.rows[0].id;
+    const { data, error } = await supabase
+      .from("goals")
+      .select("*")
+      .eq("family_id", familyData.id)
+      .order("created_at", { ascending: false });
 
-    const result = await db.query(
-      "SELECT * FROM goals WHERE family_id = $1 ORDER BY created_at DESC",
-      [familyId]
-    );
+    if (error) throw error;
 
-    console.log("✅ Metas encontradas:", result.rows.length);
-    res.json(result.rows);
-
+    res.json(data);
   } catch (error) {
     console.error("❌ ERROR GET GOALS:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error obteniendo metas"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error obteniendo metas",
     });
   }
 });
 
-// 🔹 CREAR meta
-router.post("/", async (req, res) => {
+/**
+ * ============================================
+ * POST /api/goals
+ * ============================================
+ */
+router.post("/", async (req: Request, res: Response) => {
   const { familyId, child, title, targetAmount, status } = req.body;
 
   try {
-    console.log("🔥 POST GOAL:", { familyId, child, title, targetAmount, status });
+    console.log("🔥 POST GOAL:", req.body);
 
     if (!familyId || !child || !title || !targetAmount) {
       return res.status(400).json({
-        error: "Faltan campos obligatorios"
+        error: "Faltan campos obligatorios",
       });
     }
 
-    const family = await db.query(
-      "SELECT id FROM families WHERE code = $1",
-      [familyId]
-    );
+    const { data: familyData, error: familyError } = await supabase
+      .from("families")
+      .select("id")
+      .eq("code", familyId)
+      .single();
 
-    if (family.rows.length === 0) {
-      console.error("❌ Familia no encontrada:", familyId);
+    if (familyError || !familyData) {
       return res.status(400).json({ error: "Familia no encontrada" });
     }
 
-    const realFamilyId = family.rows[0].id;
     const goalStatus = normalizeGoalStatus(status);
 
-    const result = await db.query(
-      `INSERT INTO goals (family_id, child, title, target_amount, status, created_at)
-       VALUES ($1,$2,$3,$4,$5,NOW())
-       RETURNING *`,
-      [realFamilyId, child, title, targetAmount, goalStatus]
-    );
+    const { data, error } = await supabase
+      .from("goals")
+      .insert([
+        {
+          family_id: familyData.id,
+          child,
+          title,
+          target_amount: targetAmount,
+          status: goalStatus,
+        },
+      ])
+      .select()
+      .single();
 
-    console.log("✅ Meta creada:", result.rows[0]);
-    res.json(result.rows[0]);
+    if (error) throw error;
 
+    res.json(data);
   } catch (error) {
     console.error("❌ ERROR POST GOAL:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error creando meta"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error creando meta",
     });
   }
 });
 
-// 🔹 ACTUALIZAR meta
-router.put("/:id", async (req, res) => {
+/**
+ * ============================================
+ * PUT /api/goals/:id
+ * ============================================
+ */
+router.put("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
   const { title, targetAmount, status } = req.body;
 
   try {
-    console.log("🔥 PUT GOAL:", { id, title, targetAmount });
-
     if (!title || !targetAmount) {
       return res.status(400).json({
-        error: "Faltan campos obligatorios"
+        error: "Faltan campos obligatorios",
       });
     }
 
     const goalStatus = normalizeGoalStatus(status);
 
-    const result = await db.query(
-      `UPDATE goals
-       SET title = $1, target_amount = $2, status = $3
-       WHERE id = $4
-       RETURNING *`,
-      [title, targetAmount, goalStatus, id]
-    );
+    const { data, error } = await supabase
+      .from("goals")
+      .update({
+        title,
+        target_amount: targetAmount,
+        status: goalStatus,
+      })
+      .eq("id", id)
+      .select()
+      .single();
 
-    if (result.rows.length === 0) {
+    if (error || !data) {
       return res.status(404).json({ error: "Meta no encontrada" });
     }
 
-    res.json(result.rows[0]);
+    res.json(data);
   } catch (error) {
     console.error("❌ ERROR PUT GOAL:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error actualizando meta"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error actualizando meta",
     });
   }
 });
 
-router.patch("/:id/status", async (req, res) => {
+/**
+ * ============================================
+ * PATCH /api/goals/:id/status
+ * ============================================
+ */
+router.patch("/:id/status", async (req: Request, res: Response) => {
   const { id } = req.params;
   const { status } = req.body;
 
   try {
     const goalStatus = normalizeGoalStatus(status);
 
-    const result = await db.query(
-      `UPDATE goals
-       SET status = $1
-       WHERE id = $2
-       RETURNING *`,
-      [goalStatus, id]
-    );
+    const { data, error } = await supabase
+      .from("goals")
+      .update({ status: goalStatus })
+      .eq("id", id)
+      .select()
+      .single();
 
-    if (result.rows.length === 0) {
+    if (error || !data) {
       return res.status(404).json({ error: "Meta no encontrada" });
     }
 
-    res.json(result.rows[0]);
+    res.json(data);
   } catch (error) {
-    console.error("❌ ERROR PATCH GOAL STATUS:", error);
+    console.error("❌ ERROR PATCH STATUS:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error cambiando el estado de la meta"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error cambiando estado",
     });
   }
 });
 
-router.post("/:id/complete", async (req, res) => {
+/**
+ * ============================================
+ * POST /api/goals/:id/complete
+ * ============================================
+ */
+router.post("/:id/complete", async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const goalResult = await db.query(
-      `UPDATE goals
-       SET status = 'achieved'
-       WHERE id = $1 AND status <> 'achieved'
-       RETURNING *`,
-      [id]
-    );
+    // 🔥 actualizar meta
+    const { data: goal, error: goalError } = await supabase
+      .from("goals")
+      .update({ status: "achieved" })
+      .eq("id", id)
+      .neq("status", "achieved")
+      .select()
+      .single();
 
-    if (goalResult.rows.length === 0) {
-      return res.status(404).json({ error: "Meta no encontrada o ya lograda" });
+    if (goalError || !goal) {
+      return res.status(404).json({
+        error: "Meta no encontrada o ya lograda",
+      });
     }
 
-    const goal = goalResult.rows[0];
+    // 🔥 crear transacción automática
+    const { data: transaction, error: txError } = await supabase
+      .from("transactions")
+      .insert([
+        {
+          child: goal.child,
+          type: "Gasto",
+          description: `Meta lograda: ${goal.title}`,
+          amount: goal.target_amount,
+          family_id: goal.family_id,
+          category: "ahorro",
+        },
+      ])
+      .select()
+      .single();
 
-    let transactionResult;
+    if (txError) throw txError;
 
-    try {
-      transactionResult = await db.query(
-        `INSERT INTO transactions
-         (child, type, description, amount, family_id, category, created_at)
-         VALUES ($1,'Gasto',$2,$3,$4,$5,NOW())
-         RETURNING *`,
-        [
-          goal.child,
-          `Meta lograda: ${goal.title}`,
-          goal.target_amount,
-          goal.family_id,
-          "ahorro",
-        ]
-      );
-    } catch (error) {
-      const dbError = error as Error & { code?: string };
-
-      if (dbError.code === "42703") {
-        transactionResult = await db.query(
-          `INSERT INTO transactions
-           (child, type, description, amount, family_id, created_at)
-           VALUES ($1,'Gasto',$2,$3,$4,NOW())
-           RETURNING *`,
-          [
-            goal.child,
-            `Meta lograda: ${goal.title}`,
-            goal.target_amount,
-            goal.family_id,
-          ]
-        );
-      } else {
-        throw error;
-      }
-    }
-
-    res.json({
-      goal,
-      transaction: transactionResult.rows[0],
-    });
+    res.json({ goal, transaction });
   } catch (error) {
     console.error("❌ ERROR COMPLETE GOAL:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error marcando la meta como lograda"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error completando meta",
     });
   }
 });
 
-// 🔹 BORRAR meta
-router.delete("/:id", async (req, res) => {
+/**
+ * ============================================
+ * DELETE /api/goals/:id
+ * ============================================
+ */
+router.delete("/:id", async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    console.log("🔥 DELETE GOAL:", id);
+    const { data, error } = await supabase
+      .from("goals")
+      .delete()
+      .eq("id", id)
+      .select();
 
-    const result = await db.query(
-      "DELETE FROM goals WHERE id = $1 RETURNING id",
-      [id]
-    );
+    if (error) throw error;
 
-    if (result.rows.length === 0) {
+    if (!data || data.length === 0) {
       return res.status(404).json({ error: "Meta no encontrada" });
     }
 
@@ -242,7 +267,10 @@ router.delete("/:id", async (req, res) => {
   } catch (error) {
     console.error("❌ ERROR DELETE GOAL:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error borrando meta"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error borrando meta",
     });
   }
 });

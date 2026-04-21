@@ -1,52 +1,60 @@
 import { Router, Request, Response } from "express";
-import db from "../db";
+import { supabase } from "../lib/supabase";
 
 const router = Router();
 
 /**
  * ============================================
- * ENDPOINT: GET /children/:familyCode
+ * GET /children/:familyCode
  * ============================================
- * 🔥 IMPORTANTE: esta ruta va PRIMERO
  */
 router.get("/children/:familyCode", async (req: Request, res: Response) => {
   const { familyCode } = req.params;
 
   try {
-    // 🔍 Buscar ID de la familia
-    const familyResult = await db.query(
-      "SELECT id FROM families WHERE code = $1",
-      [familyCode]
-    );
+    // 🔍 Obtener familia
+    const { data: familyData, error: familyError } = await supabase
+      .from("families")
+      .select("id")
+      .eq("code", familyCode)
+      .single();
 
-    if (familyResult.rows.length === 0) {
+    if (familyError || !familyData) {
       return res.status(404).json({ error: "Familia no encontrada" });
     }
 
-    const familyId = familyResult.rows[0].id;
-
     // 👶 Obtener hijos
-    const usersResult = await db.query(
-      `SELECT users.username, users.role, users.avatar, families.code as family_code
-       FROM users
-       JOIN families ON users.family_id = families.id
-       WHERE users.family_id = $1 AND users.role = 'child'`,
-      [familyId]
-    );
+    const { data: usersData, error: usersError } = await supabase
+      .from("users")
+      .select("username, role, avatar")
+      .eq("family_id", familyData.id)
+      .eq("role", "child");
 
-    res.json(usersResult.rows);
+    if (usersError) throw usersError;
+
+    const users = (usersData || []).map((user) => ({
+      username: user.username,
+      role: user.role,
+      avatar: user.avatar,
+      family_code: familyCode,
+    }));
+
+    res.json(users);
 
   } catch (error) {
-    console.error("ERROR GET CHILDREN:", error);
+    console.error("❌ ERROR GET CHILDREN:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error obteniendo hijos"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error obteniendo hijos",
     });
   }
 });
 
 /**
  * ============================================
- * ENDPOINT: GET /:familyCode
+ * GET /:familyCode  (Dashboard)
  * ============================================
  */
 router.get("/:familyCode", async (req: Request, res: Response) => {
@@ -54,45 +62,46 @@ router.get("/:familyCode", async (req: Request, res: Response) => {
 
   try {
     // 🔍 Buscar familia
-    const familyResult = await db.query(
-      "SELECT * FROM families WHERE code = $1",
-      [familyCode]
-    );
+    const { data: familyData, error: familyError } = await supabase
+      .from("families")
+      .select("id")
+      .eq("code", familyCode)
+      .single();
 
-    if (familyResult.rows.length === 0) {
+    if (familyError || !familyData) {
       return res.status(404).json({ error: "Familia no encontrada" });
     }
 
-    const family = familyResult.rows[0];
-
-    // 💰 Obtener ahorros
-    const savingsResult = await db.query(
-      "SELECT * FROM savings WHERE family_id = $1",
-      [family.id]
-    );
-
-    const data = savingsResult.rows[0];
+    // 💰 Obtener savings
+    const { data: savingsData, error: savingsError } = await supabase
+      .from("savings")
+      .select("*")
+      .eq("family_id", familyData.id)
+      .single();
 
     // 🟡 Si no hay datos aún
-    if (!data) {
+    if (savingsError || !savingsData) {
       return res.json({
         currentSavings: 0,
         goalProgress: 0,
-        goalTarget: 200
+        goalTarget: 200,
       });
     }
 
     // ✅ Respuesta
     res.json({
-      currentSavings: Number(data.amount),
-      goalProgress: Number(data.amount),
-      goalTarget: Number(data.goal_target)
+      currentSavings: Number(savingsData.amount),
+      goalProgress: Number(savingsData.amount),
+      goalTarget: Number(savingsData.goal_target),
     });
 
   } catch (error) {
-    console.error("ERROR DASHBOARD:", error);
+    console.error("❌ ERROR DASHBOARD:", error);
     res.status(500).json({
-      error: error instanceof Error ? error.message : "Error cargando dashboard"
+      error:
+        error instanceof Error
+          ? error.message
+          : "Error cargando dashboard",
     });
   }
 });

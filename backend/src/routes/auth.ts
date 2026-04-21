@@ -1,314 +1,226 @@
-console.log("🔥 ESTE AUTH SE ESTA USANDO");
+import { Router, Request, Response } from "express";
+import { supabase } from "../lib/supabase";
+import bcrypt from "bcrypt";
+
+const router = Router();
+
+console.log("🔥 AUTH SUPABASE ACTIVO");
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+async function getFamilyByCode(code: string) {
+  const { data, error } = await supabase
+    .from("families")
+    .select("id, code")
+    .eq("code", code)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function createFamily() {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const { data, error } = await supabase
+      .from("families")
+      .insert([{ code }])
+      .select("id, code")
+      .single();
+
+    if (!error && data) {
+      return data;
+    }
+
+    const errorCode =
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof error.code === "string"
+        ? error.code
+        : "";
+
+    if (errorCode === "23505") {
+      continue;
+    }
+
+    throw error;
+  }
+
+  throw new Error("No se pudo generar un código familiar único");
+}
 
 /**
  * ============================================
- * IMPORTACIONES Y CONFIGURACIÓN
+ * AVATAR PRESETS
  * ============================================
- * - express: framework web para Node.js
- * - pool: conexión a la base de datos PostgreSQL
- * - bcrypt: librería para encriptar contraseñas de forma segura
  */
-import express from "express";
-import pool from "../db";
-import bcrypt from "bcrypt";
-
-// Crear un enrutador de Express para gestionar rutas de autenticación
-const router = express.Router();
-
 router.get("/avatar-presets", async (_req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT id, label, image_url FROM avatar_presets ORDER BY id ASC"
-    );
+    const { data, error } = await supabase
+      .from("avatar_presets")
+      .select("id, label, image_url")
+      .order("id", { ascending: true });
 
-    res.json(result.rows);
+    if (error) throw error;
+
+    res.json(data);
   } catch (error) {
     console.error("💥 ERROR AVATAR PRESETS:", error);
     res.status(500).json({ error: "Error obteniendo avatares" });
   }
 });
 
+/**
+ * ============================================
+ * FAMILY MEMBERS
+ * ============================================
+ */
 router.get("/family-members/:familyCode", async (req, res) => {
   const { familyCode } = req.params;
 
   try {
-    const familyResult = await pool.query(
-      "SELECT id, code FROM families WHERE code = $1",
-      [familyCode.trim().toUpperCase()]
-    );
+    const { data: family, error: familyError } = await supabase
+      .from("families")
+      .select("id, code")
+      .eq("code", familyCode.trim().toUpperCase())
+      .single();
 
-    if (familyResult.rows.length === 0) {
+    if (familyError || !family) {
       return res.status(404).json({ error: "Familia no encontrada" });
     }
 
-    const family = familyResult.rows[0];
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("id, username, role, avatar")
+      .eq("family_id", family.id)
+      .order("role", { ascending: true });
 
-    const usersResult = await pool.query(
-      `SELECT id, username, role, avatar
-       FROM users
-       WHERE family_id = $1
-       ORDER BY role ASC, username ASC`,
-      [family.id]
-    );
+    if (usersError) throw usersError;
 
     res.json(
-      usersResult.rows.map((row) => ({
-        ...row,
+      users.map((u) => ({
+        ...u,
         familyCode: family.code,
       }))
     );
   } catch (error) {
     console.error("💥 ERROR FAMILY MEMBERS:", error);
-    res.status(500).json({ error: "Error obteniendo perfiles familiares" });
+    res.status(500).json({ error: "Error obteniendo perfiles" });
   }
 });
 
 /**
  * ============================================
- * ENDPOINT: POST /register
+ * REGISTER
  * ============================================
- * Permite crear un nuevo usuario (padre o hijo)
- * 
- * Recibe:
- *   - username: nombre de usuario único
- *   - password: contraseña (será encriptada)
- *   - role: "parent" o "child"
- *   - familyId: (opcional) código de familia existente
- *
- * Retorna:
- *   - message: confirmación
- *   - familyCode: código para compartir con otros padres
  */
 router.post("/register", async (req, res) => {
-  console.log("🔥🔥 REGISTER HIT 🔥🔥");
-  console.log("📦 BODY:", req.body);
-
   let { username, password, role, familyId, avatar } = req.body;
 
-  /**
-   * PASO 1: NORMALIZACIÓN DE DATOS
-   * ─────────────────────────────
-   * - Limpia espacios en blanco del username
-   * - Convierte familyId a mayúsculas para consistencia
-   * - Esto evita problemas por espacios extras o mayúsculas/minúsculas
-   */
   username = username?.trim();
   familyId = familyId?.trim().toUpperCase();
 
-  /**
-   * PASO 2: VALIDACIONES INICIALES
-   * ──────────────────────────────
-   * Verifica que los campos obligatorios lleguen
-   */
   if (!username || !password || !role) {
-    console.log("❌ Faltan campos");
     return res.status(400).json({ error: "Campos obligatorios faltantes" });
   }
 
-  /**
-   * Valida que el rol sea solo "parent" o "child"
-   * Rechaza cualquier otro valor
-   */
   if (!["parent", "child"].includes(role)) {
-    console.log("❌ Rol inválido:", role);
     return res.status(400).json({ error: "Rol inválido" });
   }
 
-  /**
-   * Requiere contraseña con mínimo 6 caracteres
-   * Por seguridad, no debe ser muy corta
-   */
   if (password.length < 6) {
-    console.log("❌ Password corto");
     return res.status(400).json({
       error: "La contraseña debe tener al menos 6 caracteres",
     });
   }
 
   try {
-    /**
-     * PASO 3: VERIFICAR QUE EL USUARIO NO EXISTA
-     * ──────────────────────────────────────────
-     * Busca en la BD si ya existe un usuario con ese username
-     * La búsqueda es CASE-INSENSITIVE (minúsculas y mayúsculas)
-     * para evitar duplicados como "juan" y "JUAN"
-     */
-    console.log("🔍 Buscando usuario existente...");
-    const existingUser = await pool.query(
-      "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
-      [username]
-    );
+    // 🔍 comprobar usuario existente
+    const { data: existing, error: existingError } = await supabase
+      .from("users")
+      .select("id")
+      .ilike("username", username);
 
-    if (existingUser.rows.length > 0) {
-      console.log("❌ Usuario ya existe");
+    if (existingError) {
+      throw existingError;
+    }
+
+    if (existing && existing.length > 0) {
       return res.status(400).json({ error: "El usuario ya existe" });
     }
 
-    /**
-     * PASO 4: ENCRIPTAR LA CONTRASEÑA
-     * ───────────────────────────────
-     * Usa bcrypt para hashear la contraseña
-     * - Parámetro 10: nivel de salting (más seguro, más lento)
-     * - Nunca se guarda la contraseña en texto plano
-     * - Solo se puede verificar, no recuperar
-     */
-    console.log("🔐 Hasheando contraseña...");
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    /**
-     * PASO 5: GESTIÓN DE LA FAMILIA
-     * ────────────────────────────
-     * Diferencia el flujo entre PADRES e HIJOS
-     */
     let family;
 
-    // LÓGICA DE PADRES
+    // 👨 PADRE
     if (role === "parent") {
       if (familyId) {
-        /**
-         * CASO A: PADRE UNIÉNDOSE A FAMILIA EXISTENTE
-         * ──────────────────────────────────────────
-         * Si el padre proporciona un código:
-         * - Busca esa familia en la BD
-         * - Usa el mismo family_id que otros padres
-         * - Permite que múltiples padres compartan acceso a los mismos hijos
-         */
-        console.log("🔗 Padre uniéndose a familia:", familyId);
+        const data = await getFamilyByCode(familyId);
 
-        const familyResult = await pool.query(
-          "SELECT * FROM families WHERE code = $1",
-          [familyId]
-        );
-
-        if (familyResult.rows.length === 0) {
-          console.log("❌ Código inválido");
-          return res
-            .status(400)
-            .json({ error: "Código familiar inválido" });
+        if (!data) {
+          return res.status(400).json({ error: "Código inválido" });
         }
 
-        family = familyResult.rows[0];
+        family = data;
       } else {
-        /**
-         * CASO B: PADRE CREANDO NUEVA FAMILIA
-         * ──────────────────────────────────
-         * Si NO proporciona código:
-         * - Genera un código aleatorio único (6 caracteres)
-         * - Inserta una nueva familia en la BD
-         * - Este código será compartido para que otros padres se unan
-         */
-        console.log("👨 Creando nueva familia");
-
-        let code;
-        let isUnique = false;
-        let attempts = 0;
-
-        /**
-         * Loop para generar código aleatorio único
-         * - Genera string aleatorio: Math.random().toString(36) da base-36
-         * - .substring(2, 8): obtiene 6 caracteres
-         * - .toUpperCase(): convierte a mayúsculas (ABC123)
-         * - Intenta máximo 10 veces (por seguridad, evita loop infinito)
-         */
-        while (!isUnique && attempts < 10) {
-          code = Math.random()
-            .toString(36)
-            .substring(2, 8)
-            .toUpperCase();
-
-          const check = await pool.query(
-            "SELECT id FROM families WHERE code = $1",
-            [code]
-          );
-
-          if (check.rows.length === 0) {
-            isUnique = true; // Código no existe, es único ✓
-          }
-
-          attempts++;
-        }
-
-        // Si no pudo generar código único en 10 intentos, error
-        if (!isUnique) {
-          return res.status(500).json({
-            error: "No se pudo generar código familiar",
-          });
-        }
-
-        /**
-         * Inserta la nueva familia en la tabla "families"
-         * RETURNING: retorna el id y code generado de la familia
-         */
-        const familyResult = await pool.query(
-          "INSERT INTO families (code) VALUES ($1) RETURNING id, code",
-          [code]
-        );
-
-        family = familyResult.rows[0];
-        console.log("✅ Familia creada:", family);
+        family = await createFamily();
       }
     }
 
-    // LÓGICA DE HIJOS
+    // 👶 HIJO
     else {
-      /**
-       * HIJOS: REQUIEREN CÓDIGO FAMILIAR OBLIGATORIO
-       * ─────────────────────────────────────────
-       * Un hijo NO puede crear familia nueva
-       * Debe proporcionar un código de una familia existente
-       * para vincularse a esa familia
-       */
       if (!familyId) {
-        console.log("❌ Falta código familiar");
         return res.status(400).json({
-          error: "Código familiar requerido para hijos",
+          error: "Código familiar requerido",
         });
       }
 
-      /**
-       * Busca la familia con el código proporcionado
-       */
-      const familyResult = await pool.query(
-        "SELECT * FROM families WHERE code = $1",
-        [familyId]
-      );
+      const data = await getFamilyByCode(familyId);
 
-      if (familyResult.rows.length === 0) {
-        console.log("❌ Código inválido");
-        return res
-          .status(400)
-          .json({ error: "Código familiar inválido" });
+      if (!data) {
+        return res.status(400).json({ error: "Código inválido" });
       }
 
-      family = familyResult.rows[0];
+      family = data;
     }
 
-    /**
-     * PASO 6: INSERTAR USUARIO EN LA BASE DE DATOS
-     * ────────────────────────────────────────────
-     * Crea el registro con:
-     * - username: único y ya verificado
-     * - password: hasheada por seguridad
-     * - role: "parent" o "child"
-     * - family_id: ya determinado (nueva o existente)
-     * 
-     * El RETURNING... devuelve el id del usuario creado
-     */
-    console.log("👤 Insertando usuario con family_id:", family.id);
+    // 👤 insertar usuario
+    const { data: userData, error } = await supabase
+      .from("users")
+      .insert([
+        {
+          username,
+          password: hashedPassword,
+          role,
+          family_id: family.id,
+          avatar: avatar ?? null,
+        },
+      ])
+      .select()
+      .single();
 
-    const userResult = await pool.query(
-      "INSERT INTO users (username, password, role, family_id, avatar) VALUES ($1, $2, $3, $4, $5) RETURNING id, avatar",
-      [username, hashedPassword, role, family.id, avatar ?? null]
-    );
+    if (error) throw error;
 
-    console.log("✅ Usuario creado:", userResult.rows);
-
-    /**
-     * PASO 7: RESPUESTA AL CLIENTE
-     * ───────────────────────────
-     * Retorna el código familiar para que el usuario lo guarde
-     * Este código será usado por otros padres para unirse
-     */
     res.json({
       message: "Usuario creado",
       familyCode: family.code,
@@ -316,244 +228,142 @@ router.post("/register", async (req, res) => {
         username,
         role,
         familyId: family.code,
-        avatar: userResult.rows[0]?.avatar ?? avatar ?? null,
+        avatar: userData.avatar ?? null,
       },
     });
-     /**
-     * MANEJO DE ERRORES
-     * ────────────────
-     * Si algo falla (conexión BD, datos inválidos, etc):
-     * - Log del error para debugging
-     * - Respuesta 500 (error interno del servidor)
-     * - Detalles del error para el cliente
-     */
-  } catch (error) {
-  if (error instanceof Error) {
-    console.log(error.message);
-  } else {
-    console.log(error);
-  }
-}
-});
 
+  } catch (error) {
+    console.error("💥 ERROR REGISTER:", error);
+    res.status(500).json({
+      error: getErrorMessage(error, "Error en registro"),
+    });
+  }
+});
 
 /**
  * ============================================
- * ENDPOINT: POST /login
+ * LOGIN
  * ============================================
- * Permite a un usuario (padre o hijo) iniciar sesión
- * 
- * Recibe:
- *   - username: nombre de usuario registrado
- *   - password: contraseña en texto plano (será verificada)
- *
- * Retorna:
- *   - message: confirmación de login exitoso
- *   - user: objeto con username, role, familyId (código)
  */
 router.post("/login", async (req, res) => {
-  console.log("📦 BODY LOGIN:", req.body);
-
   let { username, password, role } = req.body;
 
-  /**
-   * PASO 1: NORMALIZACIÓN
-   * ───────────────────
-   * Limpia espacios en blanco del username
-   * para evitar problemas por espacios extras
-   */
   username = username?.trim();
 
-  console.log("👉 USERNAME RECIBIDO:", username);
-  console.log("👉 ROLE SELECCIONADO:", role);
-
-  /**
-   * VALIDAR QUE SE ENVIÓ UN ROL
-   */
   if (!role || !["parent", "child"].includes(role)) {
-    console.log("❌ Rol no especificado o inválido:", role);
-    return res.status(400).json({ error: "Debes seleccionar un rol válido (padre o hijo)" });
+    return res.status(400).json({ error: "Rol inválido" });
   }
 
   try {
-    /**
-     * PASO 2: BUSCAR EL USUARIO EN LA BASE DE DATOS
-     * ─────────────────────────────────────────────
-     * Busca un usuario que coincida con el username
-     * La búsqueda es CASE-INSENSITIVE (LOWER)
-     * Retorna: id, username, role, family_id, password (hasheada)
-     */
-    const result = await pool.query(
-      `SELECT id, username, role, family_id, password, avatar
-       FROM users 
-       WHERE LOWER(username) = LOWER($1)`,
-      [username]
-    );
+    const { data: users } = await supabase
+      .from("users")
+      .select("*")
+      .ilike("username", username)
+      .single();
 
-    console.log("👉 RESULT DB:", result.rows);
-
-    const user = result.rows[0];
-
-    /**
-     * Si no existe el usuario en la BD, rechaza el login
-     */
-    if (!user) {
+    if (!users) {
       return res.status(400).json({ error: "Usuario no encontrado" });
     }
 
-    /**
-     * PASO 2b: VALIDAR QUE EL ROL COINCIDA
-     * ────────────────────────────────────
-     * El usuario seleccionó un rol en el formulario
-     * Verificamos que coincida con el rol registrado en la BD
-     */
-    if (user.role !== role) {
-      console.log(`❌ Role mismatch: usuario es "${user.role}" pero intentó acceder como "${role}"`);
-      return res.status(400).json({ 
-        error: `Este usuario es ${user.role === "parent" ? "padre" : "hijo"}, no puedes acceder como ${role === "parent" ? "padre" : "hijo"}`
+    if (users.role !== role) {
+      return res.status(400).json({
+        error: "Rol incorrecto",
       });
     }
 
-    /**
-     * PASO 3: VERIFICAR LA CONTRASEÑA
-     * ───────────────────────────────
-     * Usa bcrypt.compare() para verificar la contraseña
-     * - Primer parámetro: contraseña en texto plano (del formulario)
-     * - Segundo parámetro: contraseña hasheada (de la BD)
-     * 
-     * bcrypt es unidireccional:
-     * - La contraseña del usuario se "hashea" y se compara con el hash en BD
-     * - No necesita desencriptar (eso sería inseguro)
-     * 
-     * Retorna true si coincide, false si no
-     */
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, users.password);
 
     if (!isMatch) {
       return res.status(400).json({ error: "Contraseña incorrecta" });
     }
 
-    /**
-     * PASO 4: OBTENER EL CÓDIGO DE FAMILIA
-     * ────────────────────────────────────
-     * El usuario tiene family_id en BD
-     * Ahora buscamos el código (code) de esa familia
-     * Este código es lo que se muestra al usuario y se usa en el frontend
-     */
-    const familyResult = await pool.query(
-      "SELECT code FROM families WHERE id = $1",
-      [user.family_id]
-    );
+    const { data: family } = await supabase
+      .from("families")
+      .select("code")
+      .eq("id", users.family_id)
+      .single();
 
-    const familyCode = familyResult.rows[0]?.code;
-
-    /**
-     * PASO 5: RESPUESTA EXITOSA
-     * ────────────────────────
-     * Retorna los datos del usuario logueado
-     * El frontend guardará esta información en localStorage
-     * para mantener la sesión activa
-     */
     res.json({
       message: "Login correcto",
       user: {
-        username: user.username,
-        role: user.role,
-        familyId: familyCode,
-        avatar: user.avatar ?? null,
+        username: users.username,
+        role: users.role,
+        familyId: family?.code,
+        avatar: users.avatar ?? null,
       },
     });
+
   } catch (error) {
-    /**
-     * MANEJO DE ERRORES
-     * ────────────────
-     * Error por problemas con la BD o datos inválidos
-     */
     console.error("💥 ERROR LOGIN:", error);
-    res.status(500).json({ error: "Error en login" });
-  }
-});
-
-router.put("/users/:id", async (req, res) => {
-  const { id } = req.params;
-  const { username, avatar, password } = req.body;
-
-  const trimmedUsername = username?.trim();
-
-  if (!trimmedUsername) {
-    return res.status(400).json({ error: "El nombre de usuario es obligatorio" });
-  }
-
-  if (password && password.length < 6) {
-    return res.status(400).json({
-      error: "La contraseña debe tener al menos 6 caracteres",
+    res.status(500).json({
+      error: getErrorMessage(error, "Error en login"),
     });
-  }
-
-  try {
-    const existingUser = await pool.query(
-      "SELECT id, role, family_id FROM users WHERE id = $1",
-      [id]
-    );
-
-    if (existingUser.rows.length === 0) {
-      return res.status(404).json({ error: "Usuario no encontrado" });
-    }
-
-    const duplicatedUsername = await pool.query(
-      "SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2",
-      [trimmedUsername, id]
-    );
-
-    if (duplicatedUsername.rows.length > 0) {
-      return res.status(400).json({ error: "Ese nombre de usuario ya existe" });
-    }
-
-    let hashedPassword: string | null = null;
-
-    if (password) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
-
-    const result = await pool.query(
-      `UPDATE users
-       SET username = $1,
-           avatar = $2,
-           password = COALESCE($3, password)
-       WHERE id = $4
-       RETURNING id, username, role, avatar, family_id`,
-      [trimmedUsername, avatar ?? null, hashedPassword, id]
-    );
-
-    const updatedUser = result.rows[0];
-
-    const familyResult = await pool.query(
-      "SELECT code FROM families WHERE id = $1",
-      [updatedUser.family_id]
-    );
-
-    res.json({
-      id: updatedUser.id,
-      username: updatedUser.username,
-      role: updatedUser.role,
-      avatar: updatedUser.avatar,
-      familyId: familyResult.rows[0]?.code ?? null,
-    });
-  } catch (error) {
-    console.error("💥 ERROR UPDATE USER:", error);
-    res.status(500).json({ error: "Error actualizando el usuario" });
   }
 });
 
 /**
  * ============================================
- * EXPORTAR EL ROUTER
+ * UPDATE USER
  * ============================================
- * Este router se importa en server.js
- * y se usa como: app.use("/api/auth", router)
- * 
- * Esto hace que los endpoints estén disponibles en:
- * - POST /api/auth/register
- * - POST /api/auth/login
  */
+router.put("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { username, avatar, password } = req.body;
+
+  const trimmed = username?.trim();
+
+  if (!trimmed) {
+    return res.status(400).json({ error: "Username obligatorio" });
+  }
+
+  try {
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (!existingUser) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    let hashedPassword = existingUser.password;
+
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    const { data: updated } = await supabase
+      .from("users")
+      .update({
+        username: trimmed,
+        avatar: avatar ?? null,
+        password: hashedPassword,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    const { data: family } = await supabase
+      .from("families")
+      .select("code")
+      .eq("id", updated.family_id)
+      .single();
+
+    res.json({
+      id: updated.id,
+      username: updated.username,
+      role: updated.role,
+      avatar: updated.avatar,
+      familyId: family?.code ?? null,
+    });
+
+  } catch (error) {
+    console.error("💥 ERROR UPDATE USER:", error);
+    res.status(500).json({
+      error: getErrorMessage(error, "Error actualizando usuario"),
+    });
+  }
+});
+
 export default router;
