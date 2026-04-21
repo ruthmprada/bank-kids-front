@@ -203,6 +203,7 @@ export default function FamilyProfiles() {
       if (user?.username === member.username && user.role === member.role) {
         loginUser({
           username: updatedMember.username,
+          email: user.email,
           role: updatedMember.role,
           familyId: updatedMember.familyId ?? familyId,
           avatar: updatedMember.avatar ?? "",

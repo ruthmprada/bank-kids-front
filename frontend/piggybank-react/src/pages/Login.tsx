@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { getStoredUser } from "../services/authService";
+import {
+  getStoredUser,
+  loginWithSupabase,
+} from "../services/authService";
 
 export default function Login() {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [familyCode] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"child" | "parent">("child");
   const [error, setError] = useState("");
@@ -25,23 +30,13 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          password,
-          role,
-        }),
+      const data = await loginWithSupabase({
+        username: username.trim(),
+        email: email.trim(),
+        password,
+        role,
+        familyId: familyCode.trim().toUpperCase(),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Error en login");
-      }
 
       // 🔐 guardar usuario en contexto + localStorage
       loginUser(data.user);
@@ -154,12 +149,22 @@ export default function Login() {
                 }}
                 className="space-y-4"
               >
-                <input
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Usuario"
-                  className="w-full p-4 rounded-lg bg-gray-100"
-                />
+                {role === "parent" ? (
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    className="w-full p-4 rounded-lg bg-gray-100"
+                  />
+                ) : (
+                  <input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Usuario"
+                    className="w-full p-4 rounded-lg bg-gray-100"
+                  />
+                )}
 
                 <input
                   type="password"

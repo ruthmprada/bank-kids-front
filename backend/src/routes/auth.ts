@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getAvatarPresetsController,
+  getCurrentUserController,
   getFamilyMembersController,
   loginController,
   registerController,
@@ -13,6 +14,7 @@ const router = Router();
 console.log("🔥 AUTH SUPABASE ACTIVO");
 
 router.get("/avatar-presets", asyncHandler(getAvatarPresetsController));
+router.get("/me", asyncHandler(getCurrentUserController));
 router.get(
   "/family-members/:familyCode",
   asyncHandler(getFamilyMembersController)

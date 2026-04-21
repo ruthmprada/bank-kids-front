@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS families (
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) UNIQUE,
+  auth_email VARCHAR(255) NOT NULL UNIQUE,
+  auth_user_id UUID UNIQUE,
   password VARCHAR(255) NOT NULL,
   role VARCHAR(50) NOT NULL CHECK (role IN ('parent', 'child')),
   avatar VARCHAR(255),
@@ -123,6 +126,9 @@ COMMENT ON TABLE families IS 'Grupos familiares del sistema';
 COMMENT ON COLUMN families.code IS 'Código único (ej: ABC123) para invitar a otros padres';
 
 COMMENT ON TABLE users IS 'Usuarios del sistema (padres e hijos)';
+COMMENT ON COLUMN users.email IS 'Email real del padre o madre. Nullable para hijos';
+COMMENT ON COLUMN users.auth_email IS 'Email interno usado para autenticación con Supabase Auth';
+COMMENT ON COLUMN users.auth_user_id IS 'Referencia al usuario en auth.users';
 COMMENT ON COLUMN users.role IS 'Rol del usuario: parent (padre) o child (hijo)';
 COMMENT ON COLUMN users.family_id IS 'Referencia a la familia a la que pertenece';
 

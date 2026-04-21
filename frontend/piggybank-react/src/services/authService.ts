@@ -1,11 +1,7 @@
-import type {
-  RegisterInput,
-  RegisterResult,
-  StoredUser,
-  User,
-} from "../types";
+import type { Session } from "@supabase/supabase-js";
+import type { User } from "../types";
+import { supabase } from "./supabaseClient";
 
-const USERS_KEY = "users";
 const SESSION_KEY = "user";
 
 function readJson<T>(key: string, fallback: T): T {
@@ -22,26 +18,6 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-function normalizeUsername(username: string) {
-  return username.trim();
-}
-
-function generateFamilyId() {
-  return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
-function toSessionUser(user: StoredUser): User {
-  return {
-    username: user.username,
-    role: user.role,
-    familyId: user.familyId,
-  };
-}
-
-export function getUsers() {
-  return readJson<StoredUser[]>(USERS_KEY, []);
-}
-
 export function getStoredUser() {
   return readJson<User | null>(SESSION_KEY, null);
 }
@@ -54,81 +30,105 @@ export function clearStoredUser() {
   localStorage.removeItem(SESSION_KEY);
 }
 
-export function login(username: string, password: string) {
-  const normalizedUsername = normalizeUsername(username);
-  const users = getUsers();
-
-  const user = users.find(
-    (candidate) =>
-      candidate.username.toLowerCase() === normalizedUsername.toLowerCase() &&
-      candidate.password === password
-  );
-
-  if (!user) {
-    throw new Error("Usuario o contraseña incorrectos");
+async function applySession(session: Session | null) {
+  if (!session) {
+    return;
   }
 
-  return toSessionUser(user);
+  const { error } = await supabase.auth.setSession({
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+  });
+
+  if (error) {
+    throw error;
+  }
 }
 
-export function registerUser({
-  username,
-  password,
-  role,
-  familyCode,
-}: RegisterInput): RegisterResult {
-  const normalizedUsername = normalizeUsername(username);
-  const normalizedFamilyCode = familyCode?.trim().toUpperCase();
-  const users = getUsers();
+export async function fetchAuthenticatedUser() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (!normalizedUsername) {
-    throw new Error("El usuario es obligatorio");
+  if (!session?.access_token) {
+    clearStoredUser();
+    return null;
   }
 
-  if (password.length < 6) {
-    throw new Error("La contraseña debe tener al menos 6 caracteres");
+  const res = await fetch("http://localhost:3000/api/auth/me", {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    clearStoredUser();
+    await supabase.auth.signOut();
+    throw new Error(data.error || "No se pudo recuperar la sesión");
   }
 
-  const usernameTaken = users.some(
-    (candidate) =>
-      candidate.username.toLowerCase() === normalizedUsername.toLowerCase()
-  );
+  saveStoredUser(data.user);
+  return data.user as User;
+}
 
-  if (usernameTaken) {
-    throw new Error("Ese nombre de usuario ya existe");
+export async function registerWithSupabase(input: {
+  username: string;
+  email?: string;
+  password: string;
+  role: "parent" | "child";
+  familyId?: string | null;
+  avatar?: string;
+}) {
+  const res = await fetch("http://localhost:3000/api/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Error en registro");
   }
 
-  let familyId = normalizedFamilyCode;
+  await applySession(data.session ?? null);
+  saveStoredUser(data.user);
 
-  if (role === "parent") {
-    do {
-      familyId = generateFamilyId();
-    } while (users.some((candidate) => candidate.familyId === familyId));
-  } else {
-    if (!normalizedFamilyCode) {
-      throw new Error("El código familiar es obligatorio");
-    }
+  return data;
+}
 
-    const familyExists = users.some(
-      (candidate) => candidate.familyId === normalizedFamilyCode
-    );
+export async function loginWithSupabase(input: {
+  username?: string;
+  email?: string;
+  password: string;
+  role: "parent" | "child";
+  familyId?: string;
+}) {
+  const res = await fetch("http://localhost:3000/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
 
-    if (!familyExists) {
-      throw new Error("El código familiar no existe");
-    }
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Error en login");
   }
 
-  const newUser: StoredUser = {
-    username: normalizedUsername,
-    password,
-    role,
-    familyId: familyId!,
-  };
+  await applySession(data.session ?? null);
+  saveStoredUser(data.user);
 
-  localStorage.setItem(USERS_KEY, JSON.stringify([...users, newUser]));
+  return data;
+}
 
-  return {
-    user: toSessionUser(newUser),
-    familyId: newUser.familyId,
-  };
+export async function logoutFromSupabase() {
+  clearStoredUser();
+  await supabase.auth.signOut();
 }

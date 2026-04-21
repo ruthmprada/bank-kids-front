@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { Role } from "../types";
-import { getStoredUser } from "../services/authService";
+import {
+  getStoredUser,
+  registerWithSupabase,
+} from "../services/authService";
 
 type AvatarPreset = {
   id: number;
@@ -48,6 +51,7 @@ export default function Register() {
   const navigate = useNavigate();
   const { loginUser } = useAuth();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<Role>("child");
@@ -111,26 +115,18 @@ export default function Register() {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          password,
-          role,
-          familyId: familyCode || null,
-          avatar,
-        }),
+      const data = await registerWithSupabase({
+        username,
+        email: role === "parent" ? email.trim() : undefined,
+        password,
+        role,
+        familyId: familyCode || null,
+        avatar,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Error en registro");
-      }
 
       const user = data.user ?? {
         username,
+        email,
         role,
         familyId: data.familyCode,
         avatar,
@@ -246,6 +242,16 @@ export default function Register() {
                 className="w-full p-4 rounded-xl bg-gray-100"
               />
 
+              {role === "parent" && (
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email del padre o madre"
+                  className="w-full p-4 rounded-xl bg-gray-100"
+                />
+              )}
+
               <input
                 type="password"
                 value={password}
@@ -331,7 +337,7 @@ export default function Register() {
               </div>
 
               {/* FAMILY CODE */}
-              {(role === "child" || role === "parent") && (
+              {role === "child" && (
                 <input
                   value={familyCode}
                   onChange={(e) =>

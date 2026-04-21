@@ -4,6 +4,7 @@ export type Role = "parent" | "child";
 // 👤 USUARIO
 export type User = {
   username: string;
+  email?: string;
   role: Role;
   familyId: string;
   avatar?: string; // 🔥 opcional (para fotos/avatar)
@@ -17,6 +18,7 @@ export type StoredUser = User & {
 // 📝 INPUT REGISTRO
 export type RegisterInput = {
   username: string;
+  email?: string;
   password: string;
   role: Role;
   familyCode?: string;
@@ -75,6 +77,7 @@ export type SavingsGoal = {
 export type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   loginUser: (user: User) => void;
   logout: () => void;
 };

@@ -2,6 +2,9 @@ import { supabase } from "../lib/supabase";
 
 type CreateUserInput = {
   username: string;
+  email?: string | null;
+  authEmail: string;
+  authUserId: string;
   password: string;
   role: "parent" | "child";
   familyId: number;
@@ -68,11 +71,79 @@ export async function findUsersByUsername(username: string) {
   return data ?? [];
 }
 
+export async function findUsersByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .ilike("email", email);
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function findUsersByAuthEmail(authEmail: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id")
+    .ilike("auth_email", authEmail);
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
 export async function findUserByUsername(username: string) {
   const { data, error } = await supabase
     .from("users")
     .select("*")
     .ilike("username", username)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function findUserByEmail(email: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .ilike("email", email)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function findUserByAuthEmail(authEmail: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .ilike("auth_email", authEmail)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function findUserByAuthUserId(authUserId: string) {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("auth_user_id", authUserId)
     .maybeSingle();
 
   if (error) {
@@ -102,6 +173,9 @@ export async function createUser(input: CreateUserInput) {
     .insert([
       {
         username: input.username,
+        email: input.email ?? null,
+        auth_email: input.authEmail,
+        auth_user_id: input.authUserId,
         password: input.password,
         role: input.role,
         family_id: input.familyId,

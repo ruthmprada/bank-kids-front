@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import {
   getAvatarPresets,
+  getCurrentUser,
   getFamilyMembers,
   loginUser,
   registerUser,
@@ -25,6 +26,16 @@ export async function registerController(req: Request, res: Response) {
 export async function loginController(req: Request, res: Response) {
   const result = await loginUser(req.body);
   res.json(result);
+}
+
+export async function getCurrentUserController(req: Request, res: Response) {
+  const authHeader = req.headers.authorization;
+  const accessToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length)
+    : "";
+
+  const result = await getCurrentUser(accessToken);
+  res.json({ user: result });
 }
 
 export async function updateUserController(req: Request, res: Response) {

@@ -10,7 +10,11 @@ type Props = {
 };
 
 export default function ProtectedRoute({ children, role, roles }: Props) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
 
   // ❌ No autenticado
   if (!isAuthenticated) {
