@@ -5,7 +5,7 @@ import Register from "./pages/Register";
 import DashboardParent from "./pages/DashboardParent";
 import DashboardChild from "./pages/DashboardChild";
 import ProtectedRoute from "./components/ProtectedRoute";
-import PublicLayout from "./layouts/PublicLayout";
+import PublicLayout from "./components/PublicLayout";
 import NotFound from "./pages/NotFound";
 import TransactionDetail from "./pages/TransactionDetail";
 import FamilyProfiles from "./pages/FamilyProfiles";

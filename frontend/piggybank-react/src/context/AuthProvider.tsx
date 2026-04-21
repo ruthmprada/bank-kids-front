@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { AuthContext } from "./AuthContext";
-import type { User } from "./types";
+import type { User } from "../types";
 import {
   clearStoredUser,
   getStoredUser,

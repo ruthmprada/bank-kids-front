@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
-import { useAuth } from "../context/useAuth";
-import type { Transaction, SavingsGoal, Category } from "../context/types";
-import { normalizeCategory } from "../utils/categories";
+import { useAuth } from "../hooks/useAuth";
+import type { Transaction, SavingsGoal, Category } from "../types";
+import { normalizeCategory } from "../services/categoryService";
 
 type BackendUser = {
   username: string;
@@ -32,6 +32,42 @@ type BackendTransaction = {
   created_at?: string;
   category?: string;
 };
+
+function mapBackendGoal(
+  goal: BackendGoal,
+  familyId: string
+): SavingsGoal {
+  return {
+    id: String(goal.id),
+    child: goal.child,
+    title: goal.title,
+    familyId,
+    targetAmount: Number(goal.target_amount),
+    createdAt: goal.created_at,
+    status:
+      goal.status === "pending"
+        ? "pending"
+        : goal.status === "achieved"
+          ? "achieved"
+          : "approved",
+  };
+}
+
+function mapBackendTransaction(
+  transaction: BackendTransaction,
+  familyId: string
+): Transaction {
+  return {
+    id: String(transaction.id),
+    child: transaction.child ?? "",
+    amount: Number(transaction.amount),
+    type: transaction.type === "Ingreso" ? "Ingreso" : "Gasto",
+    concept: transaction.description ?? "",
+    category: normalizeCategory(transaction.category),
+    familyId,
+    date: transaction.created_at ?? new Date().toISOString(),
+  };
+}
 
 // 🔥 categorías tipadas (NO any)
 const categories: { key: Category; icon: string }[] = [
@@ -64,36 +100,6 @@ export default function DashboardParent() {
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
 
-  function mapBackendGoal(g: BackendGoal): SavingsGoal {
-    return {
-      id: String(g.id),
-      child: g.child,
-      title: g.title,
-      familyId,
-      targetAmount: Number(g.target_amount),
-      createdAt: g.created_at,
-      status:
-        g.status === "pending"
-          ? "pending"
-          : g.status === "achieved"
-            ? "achieved"
-            : "approved",
-    };
-  }
-
-  function mapBackendTransaction(t: BackendTransaction): Transaction {
-    return {
-      id: String(t.id),
-      child: t.child ?? "",
-      amount: Number(t.amount),
-      type: t.type === "Ingreso" ? "Ingreso" : "Gasto",
-      concept: t.description ?? "",
-      category: normalizeCategory(t.category),
-      familyId,
-      date: t.created_at ?? new Date().toISOString(),
-    };
-  }
-
   useEffect(() => {
     async function loadData() {
       try {
@@ -109,7 +115,7 @@ export default function DashboardParent() {
         const goalsData = await goalsRes.json();
 
         if (Array.isArray(goalsData)) {
-          setGoals(goalsData.map(mapBackendGoal));
+          setGoals(goalsData.map((goal) => mapBackendGoal(goal, familyId)));
         }
 
         const transactionsRes = await fetch(
@@ -118,7 +124,11 @@ export default function DashboardParent() {
         const transactionsData = await transactionsRes.json();
 
         if (Array.isArray(transactionsData)) {
-          setTransactions(transactionsData.map(mapBackendTransaction));
+          setTransactions(
+            transactionsData.map((transaction) =>
+              mapBackendTransaction(transaction, familyId)
+            )
+          );
         }
       } catch (error) {
         console.error("ERROR:", error);
@@ -152,7 +162,10 @@ export default function DashboardParent() {
         throw new Error(newTx?.error || "No se pudo guardar el movimiento");
       }
 
-      setTransactions((prev) => [mapBackendTransaction(newTx), ...prev]);
+      setTransactions((prev) => [
+        mapBackendTransaction(newTx, familyId),
+        ...prev,
+      ]);
       setAmount("");
       setDescription("");
       setCategory("otro");
@@ -191,7 +204,7 @@ export default function DashboardParent() {
 
       setGoals((prev) => [
         ...prev,
-        mapBackendGoal(newGoal),
+        mapBackendGoal(newGoal, familyId),
       ]);
 
       setGoalTitle("");
@@ -362,7 +375,10 @@ export default function DashboardParent() {
         )
       );
 
-      setTransactions((prev) => [mapBackendTransaction(data.transaction), ...prev]);
+      setTransactions((prev) => [
+        mapBackendTransaction(data.transaction, familyId),
+        ...prev,
+      ]);
     } catch (error) {
       console.error("ERROR logrando meta:", error);
       alert(

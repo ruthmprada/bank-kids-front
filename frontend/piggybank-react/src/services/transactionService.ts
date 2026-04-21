@@ -1,4 +1,4 @@
-import type { Transaction, TransactionType } from "../context/types";
+import type { Transaction, TransactionType } from "../types";
 
 const TRANSACTIONS_KEY = "transactions";
 

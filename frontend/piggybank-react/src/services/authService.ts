@@ -3,7 +3,7 @@ import type {
   RegisterResult,
   StoredUser,
   User,
-} from "../context/types";
+} from "../types";
 
 const USERS_KEY = "users";
 const SESSION_KEY = "user";

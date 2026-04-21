@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
-import { useAuth } from "../context/useAuth";
-import type { Transaction, SavingsGoal } from "../context/types";
-import { normalizeCategory } from "../utils/categories";
+import { useAuth } from "../hooks/useAuth";
+import type { Transaction, SavingsGoal } from "../types";
+import { normalizeCategory } from "../services/categoryService";
 
 // 🔥 Tipos backend
 type BackendGoal = {

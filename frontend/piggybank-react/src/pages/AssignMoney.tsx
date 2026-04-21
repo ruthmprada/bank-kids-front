@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "../context/useAuth";
+import { useAuth } from "../hooks/useAuth";
 import Button from "../components/Button";
-import type { Category } from "../context/types";
+import type { Category } from "../types";
 
 type TransactionType = "Ingreso" | "Gasto";
 

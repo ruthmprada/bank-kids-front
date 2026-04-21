@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/useAuth";
-import type { Role } from "../context/types";
+import { useAuth } from "../hooks/useAuth";
+import type { Role } from "../types";
 import { getStoredUser } from "../services/authService";
 
 type AvatarPreset = {

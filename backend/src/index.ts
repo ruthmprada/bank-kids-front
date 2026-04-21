@@ -4,6 +4,7 @@ import dashboardRoutes from "./routes/dashboard";
 import transactionsRoutes from "./routes/transactions";
 import authRoutes from "./routes/auth";
 import goalsRoutes from "./routes/goals";
+import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 
@@ -23,6 +24,8 @@ app.use("/api/goals", goalsRoutes);
 app.get("/", (req, res) => {
   res.send("Backend funcionando 🚀");
 });
+
+app.use(errorHandler);
 
 async function startServer() {
   app.listen(3000, () => {

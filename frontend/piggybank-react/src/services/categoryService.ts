@@ -1,4 +1,4 @@
-import type { Category } from "../context/types";
+import type { Category } from "../types";
 
 export const categoryUI = {
   comida: {

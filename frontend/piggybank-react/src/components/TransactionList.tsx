@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import type { Transaction } from "../context/types";
+import type { Transaction } from "../types";
 import Button from "./Button";
-import { categoryUI } from "../utils/categories";
+import { categoryUI } from "../services/categoryService";
 
 type Props = {
   transactions: Transaction[];

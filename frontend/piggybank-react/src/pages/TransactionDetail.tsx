@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/useAuth";
+import { useAuth } from "../hooks/useAuth";
 import { useEffect, useState } from "react";
-import type { Transaction } from "../context/types";
-import { categoryUI, normalizeCategory } from "../utils/categories";
+import type { Transaction } from "../types";
+import { categoryUI, normalizeCategory } from "../services/categoryService";
 
 type BackendTransaction = {
   id: number;

@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
-import Container from "../components/Container";
-import Button from "../components/Button";
+import Container from "./Container";
+import Button from "./Button";
 
 export default function PublicLayout() {
   return (
