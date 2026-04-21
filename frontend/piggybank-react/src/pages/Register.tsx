@@ -10,6 +10,40 @@ type AvatarPreset = {
   image_url: string;
 };
 
+async function fileToCompressedDataUrl(file: File) {
+  const imageUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("No se pudo leer la imagen"));
+      img.src = imageUrl;
+    });
+
+    const maxSize = 512;
+    const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("No se pudo preparar la imagen");
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
 export default function Register() {
   const navigate = useNavigate();
   const { loginUser } = useAuth();
@@ -47,7 +81,7 @@ export default function Register() {
     loadAvatarPresets();
   }, []);
 
-  const handleAvatarFileChange: React.ChangeEventHandler<HTMLInputElement> = (
+  const handleAvatarFileChange: React.ChangeEventHandler<HTMLInputElement> = async (
     e
   ) => {
     const file = e.target.files?.[0];
@@ -59,13 +93,17 @@ export default function Register() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setAvatar(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedImage = await fileToCompressedDataUrl(file);
+      setAvatar(compressedImage);
+      setError("");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo procesar la imagen"
+      );
+    }
   };
 
   const handleRegister: React.FormEventHandler<HTMLFormElement> = async (e) => {

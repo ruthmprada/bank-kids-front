@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicLayout from "./layouts/PublicLayout";
 import NotFound from "./pages/NotFound";
 import TransactionDetail from "./pages/TransactionDetail";
+import FamilyProfiles from "./pages/FamilyProfiles";
 
 function App() {
   return (
@@ -26,6 +27,14 @@ function App() {
         element={
           <ProtectedRoute role="parent">
             <DashboardParent />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/parent/profiles"
+        element={
+          <ProtectedRoute role="parent">
+            <FamilyProfiles />
           </ProtectedRoute>
         }
       />

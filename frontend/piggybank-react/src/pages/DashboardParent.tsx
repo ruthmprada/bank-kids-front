@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
@@ -45,6 +46,7 @@ const categories: { key: Category; icon: string }[] = [
 ];
 
 export default function DashboardParent() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const familyId = user?.familyId ?? "";
 
@@ -453,7 +455,12 @@ export default function DashboardParent() {
           </p>
         </div>
 
-        <Button onClick={logout}>Salir</Button>
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={() => navigate("/parent/profiles")}>
+            Perfil
+          </Button>
+          <Button onClick={logout}>Salir</Button>
+        </div>
       </div>
 
       {/* BALANCE */}

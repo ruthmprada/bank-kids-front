@@ -28,6 +28,41 @@ router.get("/avatar-presets", async (_req, res) => {
   }
 });
 
+router.get("/family-members/:familyCode", async (req, res) => {
+  const { familyCode } = req.params;
+
+  try {
+    const familyResult = await pool.query(
+      "SELECT id, code FROM families WHERE code = $1",
+      [familyCode.trim().toUpperCase()]
+    );
+
+    if (familyResult.rows.length === 0) {
+      return res.status(404).json({ error: "Familia no encontrada" });
+    }
+
+    const family = familyResult.rows[0];
+
+    const usersResult = await pool.query(
+      `SELECT id, username, role, avatar
+       FROM users
+       WHERE family_id = $1
+       ORDER BY role ASC, username ASC`,
+      [family.id]
+    );
+
+    res.json(
+      usersResult.rows.map((row) => ({
+        ...row,
+        familyCode: family.code,
+      }))
+    );
+  } catch (error) {
+    console.error("💥 ERROR FAMILY MEMBERS:", error);
+    res.status(500).json({ error: "Error obteniendo perfiles familiares" });
+  }
+});
+
 /**
  * ============================================
  * ENDPOINT: POST /register
@@ -436,6 +471,77 @@ router.post("/login", async (req, res) => {
      */
     console.error("💥 ERROR LOGIN:", error);
     res.status(500).json({ error: "Error en login" });
+  }
+});
+
+router.put("/users/:id", async (req, res) => {
+  const { id } = req.params;
+  const { username, avatar, password } = req.body;
+
+  const trimmedUsername = username?.trim();
+
+  if (!trimmedUsername) {
+    return res.status(400).json({ error: "El nombre de usuario es obligatorio" });
+  }
+
+  if (password && password.length < 6) {
+    return res.status(400).json({
+      error: "La contraseña debe tener al menos 6 caracteres",
+    });
+  }
+
+  try {
+    const existingUser = await pool.query(
+      "SELECT id, role, family_id FROM users WHERE id = $1",
+      [id]
+    );
+
+    if (existingUser.rows.length === 0) {
+      return res.status(404).json({ error: "Usuario no encontrado" });
+    }
+
+    const duplicatedUsername = await pool.query(
+      "SELECT id FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2",
+      [trimmedUsername, id]
+    );
+
+    if (duplicatedUsername.rows.length > 0) {
+      return res.status(400).json({ error: "Ese nombre de usuario ya existe" });
+    }
+
+    let hashedPassword: string | null = null;
+
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET username = $1,
+           avatar = $2,
+           password = COALESCE($3, password)
+       WHERE id = $4
+       RETURNING id, username, role, avatar, family_id`,
+      [trimmedUsername, avatar ?? null, hashedPassword, id]
+    );
+
+    const updatedUser = result.rows[0];
+
+    const familyResult = await pool.query(
+      "SELECT code FROM families WHERE id = $1",
+      [updatedUser.family_id]
+    );
+
+    res.json({
+      id: updatedUser.id,
+      username: updatedUser.username,
+      role: updatedUser.role,
+      avatar: updatedUser.avatar,
+      familyId: familyResult.rows[0]?.code ?? null,
+    });
+  } catch (error) {
+    console.error("💥 ERROR UPDATE USER:", error);
+    res.status(500).json({ error: "Error actualizando el usuario" });
   }
 });
 
