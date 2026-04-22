@@ -252,13 +252,13 @@ export async function loginUser(input: LoginInput) {
   const email = input.email?.trim().toLowerCase();
   const password = input.password;
   const role = input.role;
-  const familyCode = input.familyId?.trim().toUpperCase();
 
   if (!password || !role || !["parent", "child"].includes(role)) {
     throw new HttpError(400, "Credenciales inválidas");
   }
 
   let authEmail = "";
+  let appUser: any = null;
 
   if (role === "parent") {
     if (!email) {
@@ -266,55 +266,49 @@ export async function loginUser(input: LoginInput) {
     }
 
     authEmail = email;
-  } else {
-    if (!username || !familyCode) {
-      throw new HttpError(400, "Usuario, contraseña y código familiar requeridos");
+    appUser = await findUserByEmail(email);
+    if (!appUser) {
+      throw new HttpError(400, "Usuario no encontrado");
     }
-
-    const family = await findFamilyByCode(familyCode);
-
-    if (!family) {
-      throw new HttpError(400, "Código inválido");
+  } else {
+    if (!username) {
+      throw new HttpError(400, "Usuario y contraseña requeridos");
     }
 
     const childUser = await findUserByUsername(username);
 
-    if (!childUser || childUser.role !== "child" || childUser.family_id !== family.id) {
-      throw new HttpError(400, "Usuario o código familiar incorrectos");
+    if (!childUser) {
+      throw new HttpError(400, "Usuario no encontrado");
+    }
+
+    if (childUser.role !== "child") {
+      throw new HttpError(400, "Este usuario no es un niño");
     }
 
     authEmail = childUser.auth_email;
+    appUser = childUser;
   }
 
   const authData = await createAuthSession(authEmail, password);
 
-  const user =
-    (await findUserByAuthUserId(authData.user.id)) ||
-    (authData.user.email ? await findUserByAuthEmail(authData.user.email) : null) ||
-    (email ? await findUserByEmail(email) : null);
-
-  if (!user) {
-    throw new HttpError(400, "Usuario no encontrado");
+  if (!appUser) {
+    throw new HttpError(400, "Usuario no encontrado en base de datos");
   }
 
-  if (user.role !== role) {
+  if (appUser.role !== role) {
     throw new HttpError(400, "Rol incorrecto");
   }
 
-  const familyCodeFromUser = await getFamilyCodeById(user.family_id);
-
-  if (role === "child" && familyCodeFromUser !== familyCode) {
-    throw new HttpError(400, "Código inválido");
-  }
+  const familyCodeFromUser = await getFamilyCodeById(appUser.family_id);
 
   return {
     message: "Login correcto",
     user: {
-      username: user.username,
-      email: user.email ?? undefined,
-      role: user.role,
+      username: appUser.username,
+      email: appUser.email ?? undefined,
+      role: appUser.role,
       familyId: familyCodeFromUser,
-      avatar: user.avatar ?? null,
+      avatar: appUser.avatar ?? null,
     },
     session: authData.session,
   };

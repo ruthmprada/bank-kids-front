@@ -9,7 +9,6 @@ import {
 export default function Login() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [familyCode] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"child" | "parent">("child");
   const [error, setError] = useState("");
@@ -31,11 +30,10 @@ export default function Login() {
 
     try {
       const data = await loginWithSupabase({
-        username: username.trim(),
-        email: email.trim(),
+        username: role === "child" ? username.trim() : undefined,
+        email: role === "parent" ? email.trim() : undefined,
         password,
         role,
-        familyId: familyCode.trim().toUpperCase(),
       });
 
       // 🔐 guardar usuario en contexto + localStorage
