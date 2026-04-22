@@ -38,7 +38,6 @@ type LoginInput = {
   email?: string;
   password?: string;
   role?: Role;
-  familyId?: string | null;
 };
 
 type UpdateUserInput = {

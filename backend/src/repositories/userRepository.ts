@@ -58,43 +58,29 @@ export async function listChildrenByFamilyId(familyId: number) {
   return data ?? [];
 }
 
-export async function findUsersByUsername(username: string) {
+async function findUsersByField(field: "username" | "email" | "auth_email", value: string) {
   const { data, error } = await supabase
     .from("users")
     .select("id")
-    .ilike("username", username);
+    .ilike(field, value);
 
   if (error) {
     throw error;
   }
 
   return data ?? [];
+}
+
+export async function findUsersByUsername(username: string) {
+  return findUsersByField("username", username);
 }
 
 export async function findUsersByEmail(email: string) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("id")
-    .ilike("email", email);
-
-  if (error) {
-    throw error;
-  }
-
-  return data ?? [];
+  return findUsersByField("email", email);
 }
 
 export async function findUsersByAuthEmail(authEmail: string) {
-  const { data, error } = await supabase
-    .from("users")
-    .select("id")
-    .ilike("auth_email", authEmail);
-
-  if (error) {
-    throw error;
-  }
-
-  return data ?? [];
+  return findUsersByField("auth_email", authEmail);
 }
 
 export async function findUserByUsername(username: string) {
