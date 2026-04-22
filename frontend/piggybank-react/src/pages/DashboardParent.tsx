@@ -1,73 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
 import TransactionList from "../components/TransactionList";
 import { useAuth } from "../hooks/useAuth";
+import { useFamilyMembers } from "../hooks/useFamilyMembers";
+import { useFamilyTransactions } from "../hooks/useFamilyTransactions";
+import { useFamilyGoals } from "../hooks/useFamilyGoals";
 import type { Transaction, SavingsGoal, Category } from "../types";
-import { normalizeCategory } from "../services/categoryService";
-
-type BackendUser = {
-  username: string;
-  role: string;
-  family_code: string;
-  avatar?: string;
-};
-
-type BackendGoal = {
-  id: string;
-  child: string;
-  title: string;
-  target_amount: string | number;
-  created_at: string;
-  status?: string;
-};
-
-type BackendTransaction = {
-  id: number;
-  child: string | null;
-  amount: string | number;
-  type: string;
-  description?: string;
-  created_at?: string;
-  category?: string;
-};
-
-function mapBackendGoal(
-  goal: BackendGoal,
-  familyId: string
-): SavingsGoal {
-  return {
-    id: String(goal.id),
-    child: goal.child,
-    title: goal.title,
-    familyId,
-    targetAmount: Number(goal.target_amount),
-    createdAt: goal.created_at,
-    status:
-      goal.status === "pending"
-        ? "pending"
-        : goal.status === "achieved"
-          ? "achieved"
-          : "approved",
-  };
-}
-
-function mapBackendTransaction(
-  transaction: BackendTransaction,
-  familyId: string
-): Transaction {
-  return {
-    id: String(transaction.id),
-    child: transaction.child ?? "",
-    amount: Number(transaction.amount),
-    type: transaction.type === "Ingreso" ? "Ingreso" : "Gasto",
-    concept: transaction.description ?? "",
-    category: normalizeCategory(transaction.category),
-    familyId,
-    date: transaction.created_at ?? new Date().toISOString(),
-  };
-}
 
 // 🔥 categorías tipadas (NO any)
 const categories: { key: Category; icon: string }[] = [
@@ -86,9 +26,9 @@ export default function DashboardParent() {
   const { user, logout } = useAuth();
   const familyId = user?.familyId ?? "";
 
-  const [users, setUsers] = useState<BackendUser[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const { members: users } = useFamilyMembers(familyId);
+  const { transactions } = useFamilyTransactions(familyId);
+  const { goals } = useFamilyGoals(familyId);
 
   const [selectedChild, setSelectedChild] = useState("");
   const [activeChildFilter, setActiveChildFilter] = useState("");
@@ -99,44 +39,6 @@ export default function DashboardParent() {
 
   const [goalTitle, setGoalTitle] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(
-          `http://localhost:3000/api/dashboard/children/${familyId}`
-        );
-        const data = await res.json();
-        if (Array.isArray(data)) setUsers(data);
-
-        const goalsRes = await fetch(
-          `http://localhost:3000/api/goals/${familyId}`
-        );
-        const goalsData = await goalsRes.json();
-
-        if (Array.isArray(goalsData)) {
-          setGoals(goalsData.map((goal) => mapBackendGoal(goal, familyId)));
-        }
-
-        const transactionsRes = await fetch(
-          `http://localhost:3000/api/transactions/${familyId}`
-        );
-        const transactionsData = await transactionsRes.json();
-
-        if (Array.isArray(transactionsData)) {
-          setTransactions(
-            transactionsData.map((transaction) =>
-              mapBackendTransaction(transaction, familyId)
-            )
-          );
-        }
-      } catch (error) {
-        console.error("ERROR:", error);
-      }
-    }
-
-    if (familyId) loadData();
-  }, [familyId]);
 
   async function handleAddMoney() {
     if (!selectedChild || !amount) return;
@@ -162,10 +64,6 @@ export default function DashboardParent() {
         throw new Error(newTx?.error || "No se pudo guardar el movimiento");
       }
 
-      setTransactions((prev) => [
-        mapBackendTransaction(newTx, familyId),
-        ...prev,
-      ]);
       setAmount("");
       setDescription("");
       setCategory("otro");
@@ -201,11 +99,6 @@ export default function DashboardParent() {
       if (!res.ok || !newGoal?.id) {
         throw new Error(newGoal?.error || "No se pudo crear la meta");
       }
-
-      setGoals((prev) => [
-        ...prev,
-        mapBackendGoal(newGoal, familyId),
-      ]);
 
       setGoalTitle("");
       setGoalAmount("");
@@ -260,18 +153,7 @@ export default function DashboardParent() {
         throw new Error(updatedGoal?.error || "No se pudo actualizar la meta");
       }
 
-      setGoals((prev) =>
-        prev.map((item) =>
-          item.id === goal.id
-            ? {
-                ...item,
-                title: updatedGoal.title,
-                targetAmount: Number(updatedGoal.target_amount),
-                status: updatedGoal.status === "pending" ? "pending" : "approved",
-              }
-            : item
-        )
-      );
+      // La recarga de datos ocurrirá automáticamente en el próximo re-fetch
     } catch (error) {
       console.error("ERROR actualizando meta:", error);
       alert(
@@ -300,7 +182,7 @@ export default function DashboardParent() {
         throw new Error(data?.error || "No se pudo cancelar la meta");
       }
 
-      setGoals((prev) => prev.filter((item) => item.id !== goal.id));
+      alert("Meta cancelada");
     } catch (error) {
       console.error("ERROR cancelando meta:", error);
       alert(
@@ -330,18 +212,7 @@ export default function DashboardParent() {
         throw new Error(updatedGoal?.error || "No se pudo aprobar la meta");
       }
 
-      setGoals((prev) =>
-        prev.map((item) =>
-          item.id === goal.id
-            ? {
-                ...item,
-                status: "approved",
-                title: updatedGoal.title,
-                targetAmount: Number(updatedGoal.target_amount),
-              }
-            : item
-        )
-      );
+      alert("Meta aprobada");
     } catch (error) {
       console.error("ERROR aprobando meta:", error);
       alert(
@@ -364,21 +235,7 @@ export default function DashboardParent() {
         throw new Error(data?.error || "No se pudo marcar la meta como lograda");
       }
 
-      setGoals((prev) =>
-        prev.map((item) =>
-          item.id === goal.id
-            ? {
-                ...item,
-                status: "achieved",
-              }
-            : item
-        )
-      );
-
-      setTransactions((prev) => [
-        mapBackendTransaction(data.transaction, familyId),
-        ...prev,
-      ]);
+      alert("¡Meta lograda!");
     } catch (error) {
       console.error("ERROR logrando meta:", error);
       alert(
@@ -397,7 +254,7 @@ export default function DashboardParent() {
 
       if (!res.ok) throw new Error("Error eliminando transacción");
 
-      setTransactions((prev) => prev.filter((t) => t.id !== transaction.id));
+      alert("Transacción eliminada");
     } catch (error) {
       console.error("ERROR eliminando transacción:", error);
       alert("No se pudo eliminar la transacción");

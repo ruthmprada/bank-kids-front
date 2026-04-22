@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useAuthRedirect } from "../hooks/useAuthRedirect";
+import { useImageCompression } from "../hooks/useImageCompression";
 import type { Role } from "../types";
 import {
-  getStoredUser,
   registerWithSupabase,
 } from "../services/authService";
 
@@ -13,43 +14,12 @@ type AvatarPreset = {
   image_url: string;
 };
 
-async function fileToCompressedDataUrl(file: File) {
-  const imageUrl = URL.createObjectURL(file);
-
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("No se pudo leer la imagen"));
-      img.src = imageUrl;
-    });
-
-      const maxSize = 512;
-    const scale = Math.min(maxSize / image.width, maxSize / image.height, 1);
-    const width = Math.max(1, Math.round(image.width * scale));
-    const height = Math.max(1, Math.round(image.height * scale));
-
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-
-     const context = canvas.getContext("2d");
-
-    if (!context) {
-      throw new Error("No se pudo preparar la imagen");
-    }
-
-    context.drawImage(image, 0, 0, width, height);
-
-    return canvas.toDataURL("image/jpeg", 0.8);
-  } finally {
-    URL.revokeObjectURL(imageUrl);
-  }
-}
-
 export default function Register() {
+  useAuthRedirect();
+  
   const navigate = useNavigate();
   const { loginUser } = useAuth();
+  const compressImage = useImageCompression();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -61,17 +31,11 @@ export default function Register() {
   const [avatarPresets, setAvatarPresets] = useState<AvatarPreset[]>([]);
 
   useEffect(() => {
-    const user = getStoredUser();
-    if (user?.role === "parent") navigate("/parent");
-    if (user?.role === "child") navigate("/child");
-  }, [navigate]);
-
-  useEffect(() => {
     async function loadAvatarPresets() {
       try {
         const res = await fetch("http://localhost:3000/api/auth/avatar-presets");
         const data = await res.json();
-          if (Array.isArray(data)) {
+        if (Array.isArray(data)) {
           setAvatarPresets(data);
         }
       } catch (error) {
@@ -88,22 +52,22 @@ export default function Register() {
       if (!file) return;
 
       if (!file.type.startsWith("image/")) {
-      setError("El archivo seleccionado debe ser una imagen");
-      return;
-    }
+        setError("El archivo seleccionado debe ser una imagen");
+        return;
+      }
 
-       try {
-      const compressedImage = await fileToCompressedDataUrl(file);
-      setAvatar(compressedImage);
-      setError("");
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo procesar la imagen"
-      );
-    }
-  };
+      try {
+        const compressedImage = await compressImage(file);
+        setAvatar(compressedImage);
+        setError("");
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "No se pudo procesar la imagen"
+        );
+      }
+    };
 
   const handleRegister: React.FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();

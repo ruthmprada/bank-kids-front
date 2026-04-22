@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useAuthRedirect } from "../hooks/useAuthRedirect";
 import {
-  getStoredUser,
   loginWithSupabase,
 } from "../services/authService";
 
 export default function Login() {
+  useAuthRedirect();
+  
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,14 +17,6 @@ export default function Login() {
 
   const navigate = useNavigate();
   const { loginUser } = useAuth();
-
-  // 🔐 sesión persistente (auto login)
-  useEffect(() => {
-    const user = getStoredUser();
-
-    if (user?.role === "parent") navigate("/parent");
-    if (user?.role === "child") navigate("/child");
-  }, [navigate]);
 
   // 🔥 LOGIN CON BACKEND (bcrypt)
   const handleLogin = async () => {
