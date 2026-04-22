@@ -171,7 +171,7 @@ export default function TransactionDetail() {
         <div className="mt-12 flex flex-col gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="text-blue-600 font-bold"
+            className="bg-blue-600 text-white font-bold py-2 px-4 rounded"
           >
             Volver
           </button>
